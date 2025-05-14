@@ -41,7 +41,7 @@ VALUES (
         'Administrador',
         'admin',
         'chaknogf@gmail.com',
-        '$2b$12$ORcHnbOpNS4ErczFOUZsWukQkRax3zxH9dtfCw9T1A9ZshXc6Y/UW',
+        '$2b$12$dUC2UVF0m2qtXZbMafs8TuSw4cjWZJvQtA9r/OG8jNDdzEov85Ghm',
         'admin',
         'A',
         now(),
