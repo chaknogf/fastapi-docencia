@@ -30,17 +30,17 @@ class MetadatosActividad(BaseModel):
 
 
 class ActividadBase(BaseModel):
+    id: Optional[int] = None
     tema: str = field(...)
     actividad: int = field(...)
     servicio_encargado: str = field(...)
-    persona_responsable: Optional[PersonaResponsable] = field(default=None)
+    persona_responsable: Optional[Dict[str, PersonaResponsable]] = field(default=None)
     tiempo_aproximado: Optional[str] = field(default=None)
     fechas_a_desarrollar: Optional[str] = field(default=None)
     modalidad: str = field(..., min_length=1, max_length=2)
     estado: str = field(..., min_length=1, max_length=2)
     detalles: Optional[DetallesActividad] = field(default=None)
     metadatos: Optional[MetadatosActividad] = field(default=None)
-
 
 class ActividadCreate(ActividadBase):
     """Esquema para crear una nueva actividad"""
@@ -49,17 +49,17 @@ class ActividadCreate(ActividadBase):
 
 class ActividadUpdate(BaseModel):
     """Esquema para actualizar parcialmente una actividad"""
+    id: Optional[int] = None
     tema: Optional[str] = None
     actividad: Optional[int] = None
     servicio_encargado: Optional[str] = None
-    persona_responsable: Optional[PersonaResponsable] = None
+    persona_responsable: Optional[Dict[str, PersonaResponsable]] = None
     tiempo_aproximado: Optional[str] = None
     fechas_a_desarrollar: Optional[str] = None
     modalidad: Optional[str] = field(default=None, min_length=1, max_length=2)
     estado: Optional[str] = field(default=None, min_length=1, max_length=2)
     detalles: Optional[DetallesActividad] = None
     metadatos: Optional[MetadatosActividad] = None
-
 
 class ActividadOut(ActividadBase):
     id: int

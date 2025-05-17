@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import desc
+from sqlalchemy import desc, cast
 from sqlalchemy.dialects.postgresql import JSONB
 from typing import Optional, List
 from app.database.db import SessionLocal
@@ -63,6 +63,20 @@ async def get_actividades(
         return result
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/cartelera/{mes}", response_model=List[ActividadBase], tags=["actividades"])
+async def get_actividades(
+    mes: int,  # <- Ya no es Optional ni Query
+    db: SQLAlchemySession = Depends(get_db)
+):
+    try:
+        query = db.query(ActividadesModel).filter(
+                ActividadesModel.detalles.op('->>')('mes') == str(mes)
+            )
+        return query.all()
+    except SQLAlchemyError as e:
+            raise HTTPException(status_code=500, detail=f"Error en consulta por mes: {e}")
+
 
 @router.post("/actividad/crear/", status_code=201, tags=["actividades"])
 async def create_actividad(
