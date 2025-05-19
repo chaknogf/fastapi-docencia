@@ -32,6 +32,7 @@ async def get_actividades(
     modalidad: Optional[str] = Query(None),
     estado: Optional[str] = Query(None),
     entrega: Optional[str] = Query(None),
+    mes: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=0),
     token: str = Depends(oauth2_scheme),
@@ -58,6 +59,8 @@ async def get_actividades(
             query = query.filter(ActividadesModel.estado == estado)
         if entrega:
             query = query.filter(ActividadesModel.detalles.fecha_entrega_informe == entrega)
+        if mes:
+            query = query.filter(ActividadesModel.detalles.op('->>')('mes') == str(mes))
        
         result = query.offset(skip).limit(limit).all()
         return result
