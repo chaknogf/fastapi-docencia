@@ -30,7 +30,7 @@ class MetadatosActividad(BaseModel):
 
 
 class ActividadBase(BaseModel):
-    id: Optional[int] = None
+    # id: Optional[int] = None
     tema: str = field(...)
     actividad: int = field(...)
     servicio_encargado: str = field(...)
