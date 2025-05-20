@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from typing import Optional, List
 from app.database.db import SessionLocal
 from app.models.actividades import ActividadesModel
-from app.schemas.actividad import ActividadBase
+from app.schemas.actividad import ActividadBase, ActividadCreate, ActividadUpdate
 from fastapi.security import OAuth2PasswordBearer
 
 router = APIRouter()
@@ -21,7 +21,7 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/actividades/", response_model=List[ActividadBase], tags=["actividades"])
+@router.get("/actividades/", response_model=List[ActividadUpdate], tags=["actividades"])
 async def get_actividades(
     id: Optional[int] = Query(None),
     tema: Optional[str] = Query(None),
@@ -67,7 +67,7 @@ async def get_actividades(
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.get("/cartelera/{mes}", response_model=List[ActividadBase], tags=["actividades"])
+@router.get("/cartelera/{mes}", response_model=List[ActividadUpdate], tags=["actividades"])
 async def get_actividades(
     mes: int,  # <- Ya no es Optional ni Query
     db: SQLAlchemySession = Depends(get_db)
@@ -83,7 +83,7 @@ async def get_actividades(
 
 @router.post("/actividad/crear/", status_code=201, tags=["actividades"])
 async def create_actividad(
-    actividad: ActividadBase,
+    actividad: ActividadCreate,
     token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
@@ -99,7 +99,7 @@ async def create_actividad(
 @router.put("/actividad/actualizar/{actividad_id}", tags=["actividades"])
 async def update_actividad(
     actividad_id: int,
-    actividad: ActividadBase,
+    actividad: ActividadUpdate,
     token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
