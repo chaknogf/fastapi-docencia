@@ -11,6 +11,7 @@ from app.models.user import UserModel
 from sqlalchemy.orm import Session as SQLAlchemySession
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
+from app.schemas.schemas import UserCreate, UserBase, UserResponse
 
 
 
@@ -80,8 +81,8 @@ async def get_users(
 # Ruta para crear un nuevo usuario
 @router.post("/user/crear", tags=["users"])
 async def create_user(
-    user: Userschema, 
-    current_user: dict = Depends(oauth2_scheme),
+    user: UserCreate, 
+    token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)):
     try:
         # Asegúrate de que la contraseña esté cifrada
@@ -106,7 +107,7 @@ async def create_user(
 @router.put("/user/actualizar/{user_id}", tags=["users"])
 async def update_user(
     user_id: int, 
-    user: Userschema, 
+    user: UserBase, 
     token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)):
     try:
