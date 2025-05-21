@@ -45,7 +45,7 @@ def get_db():
         db.close()
         
         
-@router.get("/user/", tags=["users"])
+@router.get("/user/", response_model=List[UserResponse], tags=["users"])
 async def get_users(
     id: Optional[int] = Query(None, description="ID del usuario"),
     nombre: Optional[str] = Query(None, description="Nombre del usuario"),
