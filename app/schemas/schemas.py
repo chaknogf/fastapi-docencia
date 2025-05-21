@@ -12,7 +12,7 @@ class TokenResponse(BaseModel):
 
 # schemas.py o models.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -29,5 +29,5 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

@@ -19,7 +19,7 @@ from app.schemas.schemas import UserCreate, UserBase, UserResponse
 
 
 class Userschema(BaseModel):
-    id: int 
+   
     nombre: str | None = None
     username: str | None = None
     email: EmailStr | None = None
