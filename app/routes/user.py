@@ -18,6 +18,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 
 class Userschema(BaseModel):
+    id: int 
     nombre: str | None = None
     username: str | None = None
     email: EmailStr | None = None
