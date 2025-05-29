@@ -8,7 +8,12 @@ from app.auth.login import router as login
 
 
 
-app = FastAPI()
+app = FastAPI(
+    title="FASTAPI DOCENCIA",
+    version="3.0.0",
+    description="Documentación de la API FastAPI Docencia",
+    root_path="/fad"
+)
 
 app.add_middleware(
     CORSMiddleware,
