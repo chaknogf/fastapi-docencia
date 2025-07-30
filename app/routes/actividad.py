@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
@@ -7,9 +8,10 @@ from sqlalchemy import desc, cast
 from sqlalchemy.dialects.postgresql import JSONB
 from typing import Optional, List
 from app.database.db import SessionLocal
-from app.models.actividades import ActividadesModel
-from app.schemas.actividad import ActividadBase, ActividadCreate, ActividadUpdate
+from app.models.actividades import ActividadesModel, VistaReporte, VistaEjecucion, VistaEjecucionServicio
+from app.schemas.actividad import ActividadBase, ActividadCreate, ActividadUpdate, ActividadOut, ReporteActividad, VistaEjecucionSchema, VistaEjecucionServicioSchema
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import func, extract, Integer
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -135,3 +137,105 @@ async def delete_actividad(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Reportes
+
+
+
+@router.get("/reporte/estadisticas/estado/{anio}/{mes}", tags=["reportes"])
+async def estadisticas_estado_mes_anio(
+    anio: int,
+    mes: int,
+    db: SQLAlchemySession = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    try:
+        # Extraer año desde metadatos.registro (cadena tipo fecha)
+        resultados = db.query(
+            ActividadesModel.estado,
+            func.count(ActividadesModel.id).label("total")
+        ).filter(
+            ActividadesModel.detalles['mes'].astext.cast(Integer) == mes,
+            extract('year', func.to_date(ActividadesModel.metadatos['registro'].astext, 'YYYY-MM-DD')) == anio
+        ).group_by(ActividadesModel.estado).all()
+
+        return [{"estado": estado, "total": total} for estado, total in resultados]
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar estadísticas: {e}")
+    
+    
+@router.get("/reporte/vista", response_model=List[ReporteActividad], tags=["reportes"])
+async def obtener_reporte_vista(
+    mes: Optional[int] = Query(None, description="Número del mes (1-12)"),
+    anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
+    db: SQLAlchemySession = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    try:
+        query = db.query(VistaReporte)
+
+        if mes is not None:
+            query = query.filter(VistaReporte.mes == mes)
+        if anio is not None:
+            query = query.filter(VistaReporte.anio == anio)
+
+        reportes = query.all()
+
+        if not reportes:
+            raise HTTPException(status_code=404, detail="No se encontraron reportes para ese mes y año.")
+        
+        return JSONResponse(
+            status_code=200,
+            content=jsonable_encoder(reportes)
+        )
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar la vista: {e}")
+    
+    
+@router.get("/ejecucion", response_model=list[VistaEjecucionSchema])
+def obtener_vista_ejecucion(
+    anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
+    db: SQLAlchemySession = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    try:
+        if anio is None:
+            anio = datetime.now().year
+        
+        resultados = db.query(VistaEjecucion).filter(VistaEjecucion.anio == anio).all()
+        
+        if not resultados:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para el año especificado.")
+        
+        return JSONResponse(
+            status_code=200,
+            content=jsonable_encoder(resultados)
+        )
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar la vista de ejecución: {e}")
+
+
+@router.get("/ejecucion_servicio", response_model=list[VistaEjecucionServicioSchema])
+def obtener_vista_ejecucion_servicio(
+   anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
+    db: SQLAlchemySession = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    try:
+        if anio is None:
+            anio = datetime.now().year
+        
+        resultados = db.query(VistaEjecucionServicio).filter(VistaEjecucionServicio.anio == anio).all()
+        
+        if not resultados:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para el año especificado.")
+        
+        return JSONResponse(
+            status_code=200,
+            content=jsonable_encoder(resultados)
+        )
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar la vista de ejecución por servicio: {e}")  

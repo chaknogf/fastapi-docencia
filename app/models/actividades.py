@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, JSON, CHAR
+from sqlalchemy import Column, Integer, String, Text, JSON, CHAR, Float, desc
 from sqlalchemy.dialects.postgresql import JSONB
 from app.database.db import Base
 
@@ -16,3 +16,37 @@ class ActividadesModel(Base):
     estado = Column(CHAR(2), nullable=False)
     detalles = Column(JSONB, nullable=True)
     metadatos = Column(JSONB, nullable=True)
+    
+class VistaReporte(Base):
+    __tablename__ = "vista_reporte"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True)
+    tema = Column(String)
+    actividad = Column(String)
+    servicio_encargado = Column(String)
+    fechas_a_desarrollar = Column(String)
+    modalidad = Column(String)
+    estado = Column(String)
+    mes = Column(Integer)
+    anio = Column(Integer)
+    fecha_entrega_informe = Column(String)
+    
+    
+class VistaEjecucion(Base):
+    __tablename__ = "vista_ejecucion"
+
+    anio = Column(Integer, primary_key=True, index=True)
+    estado = Column(String, primary_key=True, index=True)
+    total_estado = Column(Integer)
+    porcentaje = Column(Float)
+
+
+class VistaEjecucionServicio(Base):
+    __tablename__ = "vista_ejecucion_servicio"
+
+    anio = Column(Integer, primary_key=True, index=True)
+    servicio_encargado = Column(String, primary_key=True, index=True)
+    estado = Column(String, primary_key=True, index=True)
+    total_estado = Column(Integer)
+    porcentaje = Column(Float)

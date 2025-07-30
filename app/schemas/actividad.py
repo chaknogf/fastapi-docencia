@@ -65,4 +65,39 @@ class ActividadUpdate(BaseModel):
 class ActividadOut(ActividadBase):
     id: int
 
+
+
+class ReporteActividad(BaseModel):
+    id: int
+    tema: str
+    actividad: str
+    servicio_encargado: Optional[str]
+    fechas_a_desarrollar: Optional[str]
+    modalidad: Optional[str]
+    estado: Optional[str]
+    mes: int
+    anio: Optional[int]
+    fecha_entrega_informe: Optional[str]
+    
+class VistaEjecucionSchema(BaseModel):
+    anio: int
+    estado: str
+    total_estado: int
+    porcentaje: float
+    
+class VistaEjecucionServicioSchema(BaseModel):
+    anio: int
+    servicio_encargado: str
+    estado: str
+    total_estado: int
+    porcentaje: float
+
+
+
+
+
     model_config = ConfigDict(from_attributes=True)
+    
+
+
+ 
