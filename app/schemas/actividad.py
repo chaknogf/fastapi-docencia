@@ -78,6 +78,7 @@ class ReporteActividad(BaseModel):
     mes: int
     anio: Optional[int]
     fecha_entrega_informe: Optional[str]
+    nota: Optional[str]
     
 class VistaEjecucionSchema(BaseModel):
     anio: int
