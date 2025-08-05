@@ -22,6 +22,7 @@ class DetallesActividad(BaseModel):
     deficiente: Optional[int] = field(default=None)
     fecha_entrega_informe: Optional[str] = field(default=None)
     mes: Optional[int] = field(default=None)
+    nota: Optional[str] = field(default=None)
 
 # Subesquema para metadatos
 class MetadatosActividad(BaseModel):
