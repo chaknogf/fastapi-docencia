@@ -31,6 +31,7 @@ class VistaReporte(Base):
     mes = Column(Integer)
     anio = Column(Integer)
     fecha_entrega_informe = Column(String)
+    nota = Column(String)
     
     
 class VistaEjecucion(Base):
@@ -50,3 +51,6 @@ class VistaEjecucionServicio(Base):
     estado = Column(String, primary_key=True, index=True)
     total_estado = Column(Integer)
     porcentaje = Column(Float)
+    
+    
+    
