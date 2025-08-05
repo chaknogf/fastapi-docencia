@@ -90,9 +90,9 @@ class VistaEjecucionSchema(BaseModel):
 class VistaEjecucionServicioSchema(BaseModel):
     anio: int
     servicio_encargado: str
-    estado: str
-    total_estado: int
+    total: int
     porcentaje: float
+    nota: str
 
 
 

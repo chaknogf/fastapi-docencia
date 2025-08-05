@@ -44,13 +44,13 @@ class VistaEjecucion(Base):
 
 
 class VistaEjecucionServicio(Base):
-    __tablename__ = "vista_ejecucion_servicio"
+    __tablename__ = "vista_servicios"
 
     anio = Column(Integer, primary_key=True, index=True)
     servicio_encargado = Column(String, primary_key=True, index=True)
-    estado = Column(String, primary_key=True, index=True)
-    total_estado = Column(Integer)
+    total = Column(Integer)
     porcentaje = Column(Float)
+    nota = Column(String)
     
     
     
