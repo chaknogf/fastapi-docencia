@@ -49,6 +49,9 @@ class VistaEjecucionServicio(Base):
     anio = Column(Integer, primary_key=True, index=True)
     servicio_encargado = Column(String, primary_key=True, index=True)
     total = Column(Integer)
+    completado = Column(Integer)
+    reprogramado = Column(Integer)
+    anulado = Column(Integer)
     porcentaje = Column(Float)
     nota = Column(String)
     

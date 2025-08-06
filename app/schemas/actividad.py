@@ -91,6 +91,9 @@ class VistaEjecucionServicioSchema(BaseModel):
     anio: int
     servicio_encargado: str
     total: int
+    completado: int
+    reprogramado: int
+    anulado: int
     porcentaje: float
     nota: str
 
