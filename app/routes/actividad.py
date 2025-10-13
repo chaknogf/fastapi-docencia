@@ -193,6 +193,7 @@ async def eliminar_actividad(
 async def reporte_vista(
     mes: Optional[int] = Query(None, description="Número del mes (1-12)"),
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
+    subdireccion: Optional[str] = Query(None, description="ID de la subdirección"),
     db: SQLAlchemySession = Depends(get_db),
     # token: str = Depends(oauth2_scheme)
 ):
@@ -204,6 +205,8 @@ async def reporte_vista(
         query = query.filter(VistaReporte.mes_id == mes)
     if anio is not None:
         query = query.filter(VistaReporte.anio == anio)
+    if subdireccion is not None:
+        query = query.filter(VistaReporte.subdireccion == subdireccion)
     reportes = query.all()
     
     if not reportes:

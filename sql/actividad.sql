@@ -176,6 +176,7 @@ SELECT
     a.tema,
     act.nombre AS actividad,
     se.nombre AS servicio_encargado,
+    su.nombre AS subdireccion,
     a.fecha_programada,
     m2.nombre AS mes,
     m2.id AS mes_id,
@@ -190,6 +191,7 @@ FROM
     actividades a
     LEFT JOIN actividad act ON a.actividad_id = act.id
     LEFT JOIN servicio_encargado se ON a.servicio_id = se.id
+    LEFT JOIN subdireccion_perteneciente su ON se.subdireccion_id = su.id
     LEFT JOIN modalidad mo ON a.modalidad_id = mo.id
     LEFT JOIN estado e ON a.estado_id = e.id
     LEFT JOIN meses m2 ON a.mes_id = m2.id;

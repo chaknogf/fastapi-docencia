@@ -170,6 +170,7 @@ class VistaReporte(Base):
     tema = Column(String)
     actividad = Column(String)
     servicio_encargado = Column(String)
+    subdireccion = Column(String)
     fecha_programada = Column(Date)
     mes = Column(String)
     mes_id = Column(Integer)
@@ -178,7 +179,7 @@ class VistaReporte(Base):
     estado = Column(String)
     nota = Column(String)
 
-# =========================================================
+#==========================
 # Vista ejecución por estado
 # =========================================================
 
