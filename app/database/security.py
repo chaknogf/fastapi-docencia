@@ -27,13 +27,13 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-# 🔹 Verificar contraseña
+# 🔹 Verificar contraseña con debug
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return pwd_context.verify(plain_password, hashed_password)
     except Exception as e:
-        print(f"❌ Error al verificar contraseña: {e}")
         return False
+
 
 # 🔹 Generar token JWT
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -43,8 +43,8 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-# 🔹 Obtener usuario actual desde el token
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+# 🔹 Obtener usuario actual desde token (sin prints)
+def get_current_user(token: str = Depends(...), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciales inválidas",
@@ -57,15 +57,30 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         if username is None:
             raise credentials_exception
 
-        expire: datetime = datetime.fromtimestamp(payload.get("exp"), datetime.timezone.utc)
-        if expire < datetime.now(datetime.timezone.utc):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
-    except JWTError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Token inválido: {str(e)}")
+        expire_ts = payload.get("exp")
+        if expire_ts is None:
+            raise credentials_exception
+
+        expire = datetime.fromtimestamp(expire_ts, timezone.utc)
+        if expire < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expirado",
+            )
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno en la validación del token",
+        )
 
     user = db.query(UserModel).filter(UserModel.username == username).first()
     if user is None:
         raise credentials_exception
 
     return user
-

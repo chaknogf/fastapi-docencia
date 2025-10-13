@@ -48,8 +48,9 @@ def login(
             )
         
         access_token = create_access_token(data={"sub": user.username}, expires_delta=timedelta(minutes=60))
-        print(f"📦 Usuario encontrado: {user.username} - HASH: {user.password}")
-        print(f"🔑 Comparando con entrada: {password}")
+        # print(f"📦 Usuario encontrado: {user.username} - HASH: {user.password}")
+        # print(f"🔑 Comparando con entrada: {password}")
+        print(f"🔑 Token generado: Inicio de Session con Exito")
         return {"access_token": access_token, "token_type": "bearer"}
        
     

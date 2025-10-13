@@ -1,108 +1,184 @@
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, ConfigDict, Field as field
+from typing import Optional, Dict
+from pydantic import BaseModel, Field as field, ConfigDict
+from datetime import datetime, date
 
+# =========================================================
+# Subesquema para Subdirección
+# =========================================================
+class SubdireccionPertenecienteSchema(BaseModel):
+    id: int
+    nombre: str                              # Nombre de la subdirección
+    descripcion: Optional[str] = None        # Descripción opcional
+    activo: bool                             # Estado activo/inactivo
+    
+    model_config = ConfigDict(from_attributes=True)
 
-# Subesquema para persona responsable
+# =========================================================
+# Subesquema para Servicio Encargado
+# =========================================================
+class ServiciosEncargadoSchema(BaseModel):
+    id: int
+    nombre: str                              # Nombre del servicio
+    descripcion: Optional[str] = None        # Descripción opcional
+    activo: bool                             # Estado activo/inactivo
+    subdireccion: Optional[SubdireccionPertenecienteSchema] = None  # Relación anidada
+    
+    model_config = ConfigDict(from_attributes=True)
+
+# =========================================================
+# Subesquema para Persona Responsable
+# =========================================================
 class PersonaResponsable(BaseModel):
-    nombre: Optional[str] = field(default=None)
-    puesto: Optional[str] = field(default=None)
+    nombre: Optional[str] = field(default=None, description="Nombre del responsable")
+    puesto: Optional[str] = field(default=None, description="Puesto o cargo del responsable")
 
-# Subesquema para detalles de la actividad
+# =========================================================
+# Subesquema para Detalles de Actividad
+# =========================================================
 class DetallesActividad(BaseModel):
-    link: Optional[str] = field(default=None)
-    duracion: Optional[str] = field(default=None)
-    grupo_dirigido: Optional[str] = field(default=None)
-    lugar: Optional[str] = field(default=None)
-    contenido: Optional[str] = field(default=None)
-    asistencia: Optional[int] = field(default=None)
-    inasistencia: Optional[int] = field(default=None)
-    excelente: Optional[int] = field(default=None)
-    bueno: Optional[int] = field(default=None)
-    regular: Optional[int] = field(default=None)
-    deficiente: Optional[int] = field(default=None)
-    fecha_entrega_informe: Optional[str] = field(default=None)
-    mes: Optional[int] = field(default=None)
-    nota: Optional[str] = field(default=None)
+    link: Optional[str] = None
+    duracion: Optional[str] = None
+    grupo_dirigido: Optional[str] = None
+    lugar: Optional[str] = None
+    contenido: Optional[str] = None
+    asistencia: Optional[int] = None
+    inasistencia: Optional[int] = None
+    excelente: Optional[int] = None
+    bueno: Optional[int] = None
+    regular: Optional[int] = None
+    deficiente: Optional[int] = None
+    fecha_entrega_informe: Optional[str] = None
+    mes: Optional[int] = None
+    nota: Optional[str] = None
 
-# Subesquema para metadatos
+# =========================================================
+# Subesquema para Metadatos
+# =========================================================
 class MetadatosActividad(BaseModel):
-    user: Optional[str] = field(default=None)
-    registro: Optional[str] = field(default=None)
+    user: Optional[str] = None
+    registro: Optional[str] = None
 
-
+# =========================================================
+# Schema base para creación de Actividad
+# =========================================================
 class ActividadBase(BaseModel):
-    tema: str = field(...)
-    actividad: int = field(...)
-    servicio_encargado: str = field(...)
-    persona_responsable: Optional[Dict[str, PersonaResponsable]] = field(default=None)
-    tiempo_aproximado: Optional[str] = field(default=None)
-    fechas_a_desarrollar: Optional[str] = field(default=None)
-    modalidad: str = field(..., min_length=1, max_length=2)
-    estado: str = field(..., min_length=1, max_length=2)
-    detalles: Optional[DetallesActividad] = field(default=None)
-    metadatos: Optional[MetadatosActividad] = field(default=None)
+    tema: str
+    actividad_id: int
+    servicio_id: int
+    subdireccion_id: int
+    modalidad_id: int
+    estado_id: int
+    mes_id: Optional[int] = None
+    persona_responsable: Optional[Dict[str, "PersonaResponsable"]] = None
+    detalles: Optional["DetallesActividad"] = None
+    metadatos: Optional["MetadatosActividad"] = None
+    tiempo_aproximado: Optional[str] = None
+    fecha_programada: Optional[date] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
+# =========================================================
+# Schema para crear actividad
+# =========================================================
 class ActividadCreate(ActividadBase):
-    """Esquema para crear una nueva actividad"""
+    """Schema para crear una nueva actividad"""
     pass
 
-
+# =========================================================
+# Schema para actualizar actividad
+# =========================================================
 class ActividadUpdate(BaseModel):
-    """Esquema para actualizar parcialmente una actividad"""
+    """Schema para actualizar parcialmente una actividad"""
     id: Optional[int] = None
-    tema: Optional[str] = None
-    actividad: Optional[int] = None
+    ema: str
+    actividad_id: int
+    servicio_id: int
+    subdireccion_id: int
+    modalidad_id: int
+    estado_id: int
+    mes_id: Optional[int] = None
+    persona_responsable: Optional[Dict[str, "PersonaResponsable"]] = None
+    detalles: Optional["DetallesActividad"] = None
+    metadatos: Optional["MetadatosActividad"] = None
+    tiempo_aproximado: Optional[str] = None
+    fecha_programada: Optional[date] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+# =========================================================
+# Schema para vistas completas de actividad
+# =========================================================
+class ActividadVista(BaseModel):
+    id: int
+    tema: str
+    actividad: str
+    actividad_id: int
+    descripcion_actividad: Optional[str] = None
+
+    subdireccion: Optional[str] = None
+    subdireccion_id: Optional[int] = None
     servicio_encargado: Optional[str] = None
+    servicio_id: Optional[int] = None
+
     persona_responsable: Optional[Dict[str, PersonaResponsable]] = None
     tiempo_aproximado: Optional[str] = None
-    fechas_a_desarrollar: Optional[str] = None
-    modalidad: Optional[str] = field(default=None, min_length=1, max_length=2)
-    estado: Optional[str] = field(default=None, min_length=1, max_length=2)
+    fecha_programada: Optional[date] = None  #
+    mes: Optional[str] = None
+    mes_id: Optional[int] = None
+    anio: Optional[int] = None
+
+    modalidad: Optional[str] = None
+    modalidad_id: Optional[int] = None
+    estado: Optional[str] = None
+    estado_id: Optional[int] = None
+
     detalles: Optional[DetallesActividad] = None
     metadatos: Optional[MetadatosActividad] = None
-    
+
+    # ✅ Permite crear instancias desde ORM (SQLAlchemy)
+    model_config = ConfigDict(from_attributes=True)
 
 
+# =========================================================
+# Schema de salida con ID
+# =========================================================
 class ActividadOut(ActividadBase):
     id: int
 
-
-
+# =========================================================
+# Schema para reportes resumidos
+# =========================================================
 class ReporteActividad(BaseModel):
     id: int
     tema: str
     actividad: str
-    servicio_encargado: Optional[str]
-    fechas_a_desarrollar: Optional[str]
-    modalidad: Optional[str]
-    estado: Optional[str]
-    mes: int
-    anio: Optional[int]
-    fecha_entrega_informe: Optional[str]
-    nota: Optional[str]
-    
-class VistaEjecucionSchema(BaseModel):
-    anio: int
-    estado: str
-    total_estado: int
-    porcentaje: float
-    
-class VistaEjecucionServicioSchema(BaseModel):
-    anio: int
-    servicio_encargado: str
-    total: int
-    completado: int
-    reprogramado: int
-    anulado: int
-    porcentaje: float
-    nota: str
-
-
-
-
+    subdireccion: Optional[str] = None
+    servicio_encargado: Optional[str] = None
+    fecha_programada: Optional[date] = None
+    mes: Optional[str] = None
+    mes_id: Optional[int] = None
+    anio: Optional[int] = None
+    modalidad: Optional[str] = None
+    estado: Optional[str] = None
+    nota: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+# =========================================================
+# Schema para vista de ejecución por estado
+# =========================================================
+class VistaEjecucionSchema(BaseModel):
+    mes_id: int
+    mes: str
+    anio: int
+    estado_id: int
+    estado: str
+    servicio_id: int
+    servicio_encargado: str
+    subdireccion_id: int
+    subdireccion: str
+    total_actividades: int
     
 
+    model_config = ConfigDict(from_attributes=True)
 
- 

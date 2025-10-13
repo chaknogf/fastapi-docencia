@@ -1,34 +1,60 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Optional, List, Dict
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from sqlalchemy import desc, cast
-from sqlalchemy.dialects.postgresql import JSONB
-from typing import Optional, List
+from sqlalchemy import desc, func, extract, Integer, cast
+
 from app.database.db import SessionLocal
-from app.models.actividades import ActividadesModel, VistaReporte, VistaEjecucion, VistaEjecucionServicio
-from app.schemas.actividad import ActividadBase, ActividadCreate, ActividadUpdate, ActividadOut, ReporteActividad, VistaEjecucionSchema, VistaEjecucionServicioSchema
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import func, extract, Integer
+from app.models.actividades import (
+    ActividadesModel,
+    VistaReporte,
+    VistaEjecucion,
+    VistaEjecucion,
+    VistaActividad
+)
+from app.schemas.actividad import (
+    ActividadCreate,
+    ActividadUpdate,
+    ActividadVista,
+    ReporteActividad,
+    VistaEjecucionSchema,
+   
+)
 
-router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+# =========================
+# ROUTER Y SEGURIDAD
+# =========================
+router = APIRouter()  # Instancia de APIRouter de FastAPI
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # Seguridad OAuth2
 
+
+# =========================
+# DEPENDENCIA DE DB
+# =========================
 def get_db():
+    """
+    Genera y cierra la sesión de la base de datos por petición.
+    Esto se usa en los endpoints con `Depends(get_db)`.
+    """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-@router.get("/actividades/", response_model=List[ActividadUpdate], tags=["actividades"])
-async def get_actividades(
+
+# =========================
+# ENDPOINT: LISTAR ACTIVIDADES
+# =========================
+@router.get("/actividades/", response_model=List[ActividadVista], tags=["actividades"])
+async def listar_actividades(
     id: Optional[int] = Query(None),
     tema: Optional[str] = Query(None),
-    actividad: Optional[int] = Query(None),
-    service_encargado: Optional[str] = Query(None),
+    actividad: Optional[str] = Query(None),
+    servicio_encargado: Optional[str] = Query(None),
     persona: Optional[str] = Query(None),
     fecha: Optional[str] = Query(None),
     modalidad: Optional[str] = Query(None),
@@ -36,206 +62,172 @@ async def get_actividades(
     entrega: Optional[str] = Query(None),
     mes: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=0),
-    token: str = Depends(oauth2_scheme),
+    limit: int = Query(10, ge=1),
+    token: str = Depends(oauth2_scheme),  # Requiere token
     db: SQLAlchemySession = Depends(get_db)
 ):
+    """
+    Lista actividades filtrando por múltiples parámetros opcionales.
+    Los filtros permiten búsquedas exactas o parciales.
+    """
     try:
-        query = db.query(ActividadesModel).order_by(desc(ActividadesModel.id))
+        # Query base de la vista completa de actividades
+        query = db.query(VistaActividad).order_by(desc(VistaActividad.id))
 
+        # Aplicar filtros condicionales si se pasan parámetros
         if id:
-            query = query.filter(ActividadesModel.id == id)
+            query = query.filter(VistaActividad.id == id)
         if tema:
-            query = query.filter(ActividadesModel.tema.ilike(f"%{tema}%"))
+            query = query.filter(VistaActividad.tema.ilike(f"%{tema}%"))
         if actividad:
-            query = query.filter(ActividadesModel.actividad == actividad)
-        if service_encargado:
-            query = query.filter(ActividadesModel.service_encargado.ilike(f"%{service_encargado}%"))
+            query = query.filter(VistaActividad.actividad.ilike(f"%{actividad}%"))
+        if servicio_encargado:
+            query = query.filter(VistaActividad.servicio_encargado.ilike(f"%{servicio_encargado}%"))
         if persona:
-            query = query.filter(ActividadesModel.persona_responsable.nombre.ilike(f"%{persona}%"))
+            # Filtro JSON: nombre del responsable dentro de persona_responsable
+            query = query.filter(VistaActividad.persona_responsable['r0']['nombre'].astext.ilike(f"%{persona}%"))
         if fecha:
-            query = query.filter(ActividadesModel.fechas_a_desarrollar.ilike(f"%{fecha}%"))
+            query = query.filter(VistaActividad.fecha_programada == fecha)
         if modalidad:
-            query = query.filter(ActividadesModel.modalidad == modalidad)
+            query = query.filter(VistaActividad.modalidad == modalidad)
         if estado:
-            query = query.filter(ActividadesModel.estado == estado)
+            query = query.filter(VistaActividad.estado == estado)
         if entrega:
-            query = query.filter(ActividadesModel.detalles.fecha_entrega_informe == entrega)
+            query = query.filter(VistaActividad.detalles['fecha_entrega_informe'].astext == entrega)
         if mes:
-            query = query.filter(ActividadesModel.detalles.op('->>')('mes') == str(mes))
-       
-        result = query.offset(skip).limit(limit).all()
-        return result
+            query = query.filter(VistaActividad.detalles['mes'].astext.cast(Integer) == mes)
+
+        # Aplicar paginación
+        return query.offset(skip).limit(limit).all()
+
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-@router.get("/cartelera/{mes}", response_model=List[ActividadUpdate], tags=["actividades"])
-async def get_actividades(
-    mes: int,  # <- Ya no es Optional ni Query
-    db: SQLAlchemySession = Depends(get_db)
-):
-    try:
-        query = db.query(ActividadesModel).filter(
-                ActividadesModel.detalles.op('->>')('mes') == str(mes)
-            )
-        return query.all()
-    except SQLAlchemyError as e:
-            raise HTTPException(status_code=500, detail=f"Error en consulta por mes: {e}")
 
 
+# =========================
+# ENDPOINT: CREAR ACTIVIDAD
+# =========================
 @router.post("/actividad/crear/", status_code=201, tags=["actividades"])
-async def create_actividad(
+async def crear_actividad(
     actividad: ActividadCreate,
     token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
+    """
+    Crea una nueva actividad en la tabla `actividades`.
+    """
     try:
-        new_actividad = ActividadesModel(**actividad.model_dump())
-        db.add(new_actividad)
-        db.commit()
-        return JSONResponse(status_code=201, content={"message": "Actividad creado exitosamente", "id": new_actividad.id})
+        # Crear instancia del modelo con los datos del schema
+        nueva_actividad = ActividadesModel(**actividad.model_dump())
+        db.add(nueva_actividad)  # Agregar a sesión
+        db.commit()              # Guardar cambios
+        db.refresh(nueva_actividad)  # Refrescar para obtener ID generado
+        return {"message": "Actividad creada exitosamente", "id": nueva_actividad.id}
+
     except SQLAlchemyError as e:
-        db.rollback()
+        db.rollback()  # Deshacer cambios en caso de error
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# =========================
+# ENDPOINT: ACTUALIZAR ACTIVIDAD
+# =========================
 @router.put("/actividad/actualizar/{actividad_id}", tags=["actividades"])
-async def update_actividad(
+async def actualizar_actividad(
     actividad_id: int,
     actividad: ActividadUpdate,
     token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
+    """
+    Actualiza una actividad existente. Solo actualiza los campos enviados.
+    """
     try:
         db_actividad = db.query(ActividadesModel).filter(ActividadesModel.id == actividad_id).first()
         if not db_actividad:
-            raise HTTPException(status_code=404, detail="Actividad no encontrado")
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
 
-        update_data = actividad.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        # Actualiza solo los campos que se pasaron en el request
+        for key, value in actividad.model_dump(exclude_unset=True).items():
             setattr(db_actividad, key, value)
 
         db.commit()
-        return JSONResponse(status_code=200, content={"message": "Actividad actualizado exitosamente"})
+        db.refresh(db_actividad)
+        return {"message": "Actividad actualizada exitosamente"}
+
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# =========================
+# ENDPOINT: ELIMINAR ACTIVIDAD
+# =========================
 @router.delete("/actividad/eliminar/{actividad_id}", tags=["actividades"])
-async def delete_actividad(
+async def eliminar_actividad(
     actividad_id: int,
     token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
+    """
+    Elimina una actividad por su ID.
+    """
     try:
         db_actividad = db.query(ActividadesModel).filter(ActividadesModel.id == actividad_id).first()
         if not db_actividad:
-            raise HTTPException(status_code=404, detail="Actividad no encontrado")
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
 
         db.delete(db_actividad)
         db.commit()
-        return JSONResponse(status_code=200, content={"message": "Actividad eliminado exitosamente"})
+        return {"message": "Actividad eliminada exitosamente"}
+
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Reportes
-
-
-
-@router.get("/reporte/estadisticas/estado/{anio}/{mes}", tags=["reportes"])
-async def estadisticas_estado_mes_anio(
-    anio: int,
-    mes: int,
-    db: SQLAlchemySession = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
-):
-    try:
-        # Extraer año desde metadatos.registro (cadena tipo fecha)
-        resultados = db.query(
-            ActividadesModel.estado,
-            func.count(ActividadesModel.id).label("total")
-        ).filter(
-            ActividadesModel.detalles['mes'].astext.cast(Integer) == mes,
-            extract('year', func.to_date(ActividadesModel.metadatos['registro'].astext, 'YYYY-MM-DD')) == anio
-        ).group_by(ActividadesModel.estado).all()
-
-        return [{"estado": estado, "total": total} for estado, total in resultados]
-
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error al generar estadísticas: {e}")
-    
-    
+# =========================
+# ENDPOINT: REPORTE DE ACTIVIDADES
+# =========================
 @router.get("/reporte/vista", response_model=List[ReporteActividad], tags=["reportes"])
-async def obtener_reporte_vista(
+async def reporte_vista(
     mes: Optional[int] = Query(None, description="Número del mes (1-12)"),
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
     db: SQLAlchemySession = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ):
-    try:
-        query = db.query(VistaReporte)
-
-        if mes is not None:
-            query = query.filter(VistaReporte.mes == mes)
-        if anio is not None:
-            query = query.filter(VistaReporte.anio == anio)
-
-        reportes = query.all()
-
-        if not reportes:
-            raise HTTPException(status_code=404, detail="No se encontraron reportes para ese mes y año.")
-        
-        return JSONResponse(
-            status_code=200,
-            content=jsonable_encoder(reportes)
-        )
-
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error al consultar la vista: {e}")
+    """
+    Retorna la lista de reportes resumidos filtrando opcionalmente por mes y año.
+    """
+    query = db.query(VistaReporte)
+    if mes is not None:
+        query = query.filter(VistaReporte.mes_id == mes)
+    if anio is not None:
+        query = query.filter(VistaReporte.anio == anio)
+    reportes = query.all()
     
+    if not reportes:
+        raise HTTPException(status_code=404, detail="No se encontraron reportes.")
     
-@router.get("/ejecucion", response_model=list[VistaEjecucionSchema])
-def obtener_vista_ejecucion(
+    return reportes
+
+
+# =========================
+# ENDPOINT: VISTA DE EJECUCIÓN POR ESTADO
+# =========================
+@router.get("/ejecucion", response_model=List[VistaEjecucionSchema], tags=["reportes"])
+async def vista_ejecucion(
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
     db: SQLAlchemySession = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ):
-    try:
-        if anio is None:
-            anio = datetime.now().year
-        
-        resultados = db.query(VistaEjecucion).filter(VistaEjecucion.anio == anio).all()
-        
-        if not resultados:
-            raise HTTPException(status_code=404, detail="No se encontraron datos para el año especificado.")
-        
-        return JSONResponse(
-            status_code=200,
-            content=jsonable_encoder(resultados)
-        )
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error al consultar la vista de ejecución: {e}")
+    """
+    Retorna la ejecución de actividades agrupadas por estado para un año específico.
+    """
+    
+    resultados = db.query(VistaEjecucion).filter(VistaEjecucion.anio == anio).all()
+    if not resultados:
+        raise HTTPException(status_code=404, detail="No se encontraron datos para el año especificado.")
+    return resultados
 
 
-@router.get("/ejecucion_servicio", response_model=list[VistaEjecucionServicioSchema])
-def obtener_vista_ejecucion_servicio(
-   anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
-    db: SQLAlchemySession = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
-):
-    try:
-        if anio is None:
-            anio = datetime.now().year
-        
-        resultados = db.query(VistaEjecucionServicio).filter(VistaEjecucionServicio.anio == anio).all()
-        
-        if not resultados:
-            raise HTTPException(status_code=404, detail="No se encontraron datos para el año especificado.")
-        
-        return JSONResponse(
-            status_code=200,
-            content=jsonable_encoder(resultados)
-        )
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error al consultar la vista de ejecución por servicio: {e}")  
