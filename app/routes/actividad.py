@@ -63,7 +63,7 @@ async def listar_actividades(
     mes: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1),
-    token: str = Depends(oauth2_scheme),  # Requiere token
+    # token: str = Depends(oauth2_scheme),  # Requiere token
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
@@ -194,7 +194,7 @@ async def reporte_vista(
     mes: Optional[int] = Query(None, description="Número del mes (1-12)"),
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
     db: SQLAlchemySession = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    # token: str = Depends(oauth2_scheme)
 ):
     """
     Retorna la lista de reportes resumidos filtrando opcionalmente por mes y año.
@@ -215,19 +215,28 @@ async def reporte_vista(
 # =========================
 # ENDPOINT: VISTA DE EJECUCIÓN POR ESTADO
 # =========================
-@router.get("/ejecucion", response_model=List[VistaEjecucionSchema], tags=["reportes"])
-async def vista_ejecucion(
-    anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
+@router.get("/reporte/ejecucion", tags=["reportes"])
+async def reporte_ejecucion(
+    subdireccion_id: int | None = Query(None),
+    servicio_id: int | None = Query(None),
+    mes_id: int | None = Query(None),
+    anio: int | None = Query(None),
     db: SQLAlchemySession = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
 ):
-    """
-    Retorna la ejecución de actividades agrupadas por estado para un año específico.
-    """
-    
-    resultados = db.query(VistaEjecucion).filter(VistaEjecucion.anio == anio).all()
+    query = db.query(VistaEjecucion)
+
+    if subdireccion_id:
+        query = query.filter(VistaEjecucion.subdireccion_id == subdireccion_id)
+    if servicio_id:
+        query = query.filter(VistaEjecucion.servicio_id == servicio_id)
+    if mes_id:
+        query = query.filter(VistaEjecucion.mes_id == mes_id)
+    if anio:
+        query = query.filter(VistaEjecucion.anio == anio)
+
+    resultados = query.all()
+
     if not resultados:
-        raise HTTPException(status_code=404, detail="No se encontraron datos para el año especificado.")
+        raise HTTPException(status_code=404, detail="No se encontraron resultados de ejecución")
+
     return resultados
-
-

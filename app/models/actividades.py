@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Date, Boolean, CHAR, ForeignKey, DateTime, Float
+from sqlalchemy import Column, Integer, String, Text, Date, Boolean, CHAR, ForeignKey, DateTime, Float, BigInteger
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, deferred
 from datetime import datetime
@@ -181,17 +181,23 @@ class VistaReporte(Base):
 # =========================================================
 # Vista ejecución por estado
 # =========================================================
+
 class VistaEjecucion(Base):
     __tablename__ = "vista_ejecucion"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
+    __mapper_args__ = {"primary_key": ["subdireccion_id", "servicio_id", "mes_id", "anio"]}
 
-    mes_id = Column(Integer, primary_key=True, index=True)
-    mes = Column(String)
-    anio = Column(Integer, primary_key=True, index=True)
-    estado_id = Column(Integer)
-    estado = Column(String)
-    servicio_id = Column(Integer)
-    servicio_encargado = Column(String)
-    subdireccion_id = Column(Integer)
+    subdireccion_id = Column(Integer, primary_key=True)
     subdireccion = Column(String)
-    total_actividades = Column(Integer)
+    servicio_id = Column(Integer, primary_key=True)
+    servicio_encargado = Column(String)
+    mes_id = Column(Integer, primary_key=True)
+    mes = Column(String)
+    anio = Column(Integer, primary_key=True)
+
+    completa = Column(Integer)
+    programada = Column(Integer)
+    reprogramada = Column(Integer)
+    anulada = Column(Integer)
+    total = Column(Integer)
+

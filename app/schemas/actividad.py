@@ -168,16 +168,18 @@ class ReporteActividad(BaseModel):
 # Schema para vista de ejecución por estado
 # =========================================================
 class VistaEjecucionSchema(BaseModel):
-    mes_id: int
-    mes: str
-    anio: int
-    estado_id: int
-    estado: str
-    servicio_id: int
-    servicio_encargado: str
-    subdireccion_id: int
-    subdireccion: str
-    total_actividades: int
+    subdireccion_id: Optional[int] = None
+    subdireccion: Optional[str] = None
+    servicio_id: Optional[int] = None
+    servicio_encargado: Optional[str] = None
+    mes_id: Optional[int] = None
+    mes: Optional[str] = None
+    anio: Optional[int] = None
+    completa: Optional[int] = None
+    programada: Optional[int] = None
+    reprogramada: Optional[int] = None
+    anulada: Optional[int] = None
+    total: Optional[int] = None
     
 
     model_config = ConfigDict(from_attributes=True)

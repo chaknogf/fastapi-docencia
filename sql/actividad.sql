@@ -202,35 +202,51 @@ FROM
 
 CREATE OR REPLACE VIEW vista_ejecucion AS
 SELECT
+    s.id AS subdireccion_id,
+    s.nombre AS subdireccion,
+    se.id AS servicio_id,
+    se.nombre AS servicio_encargado,
     m.id AS mes_id,
     m.nombre AS mes,
     EXTRACT(
         YEAR
         FROM a.fecha_programada
     )::INT AS anio,
-    e.id AS estado_id,
-    e.nombre AS estado,
-    se.id AS servicio_id,
-    se.nombre AS servicio_encargado,
-    s.id AS subdireccion_id,
-    s.nombre AS subdireccion,
-    COUNT(a.id) AS total_actividades
+
+-- Conteo por estado
+COUNT(*) FILTER (
+    WHERE
+        e.nombre ILIKE '%completa%'
+) AS completa,
+COUNT(*) FILTER (
+    WHERE
+        e.nombre ILIKE '%programada%'
+) AS programada,
+COUNT(*) FILTER (
+    WHERE
+        e.nombre ILIKE '%reprogramada%'
+) AS reprogramada,
+COUNT(*) FILTER (
+    WHERE
+        e.nombre ILIKE '%anulada%'
+) AS anulada,
+
+-- Total de todas
+COUNT(*) AS total
 FROM
     actividades a
+    LEFT JOIN subdireccion_perteneciente s ON a.subdireccion_id = s.id
+    LEFT JOIN servicio_encargado se ON a.servicio_id = se.id
     LEFT JOIN meses m ON a.mes_id = m.id
     LEFT JOIN estado e ON a.estado_id = e.id
-    LEFT JOIN servicio_encargado se ON a.servicio_id = se.id
-    LEFT JOIN subdireccion_perteneciente s ON a.subdireccion_id = s.id
 WHERE
     a.mes_id IS NOT NULL
 GROUP BY
-    m.id,
-    m.nombre,
-    anio,
-    e.id,
-    e.nombre,
+    s.id,
+    s.nombre,
     se.id,
     se.nombre,
-    s.id,
-    s.nombre
-ORDER BY anio DESC, mes_id ASC, e.id ASC, se.id ASC;
+    m.id,
+    m.nombre,
+    anio
+ORDER BY anio DESC, mes_id ASC, s.id ASC, se.id ASC;
