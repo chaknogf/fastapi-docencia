@@ -6,6 +6,14 @@ from datetime import datetime, date
 # Subesquema para Subdirección
 # =========================================================
 class SubdireccionPertenecienteSchema(BaseModel):
+    
+    nombre: str                              # Nombre de la subdirección
+    descripcion: Optional[str] = None        # Descripción opcional
+    activo: bool                             # Estado activo/inactivo
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class SubdireccionPertenecienteUpdate(BaseModel):
     id: int
     nombre: str                              # Nombre de la subdirección
     descripcion: Optional[str] = None        # Descripción opcional
@@ -17,6 +25,16 @@ class SubdireccionPertenecienteSchema(BaseModel):
 # Subesquema para Servicio Encargado
 # =========================================================
 class ServiciosEncargadoSchema(BaseModel):
+    nombre: str                              # Nombre del servicio
+    descripcion: Optional[str] = None        # Descripción opcional
+    jefe_inmediato: Optional[str] = None   # Jefe inmediato del servicio
+    encargado_servicio: Optional[str] = None # Encargado del servicio
+    activo: bool                             # Estado activo/inactivo
+    subdireccion: Optional[SubdireccionPertenecienteSchema] = None  # Relación anidada
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class ServiciosEncargadoUpdate(BaseModel):
     id: int
     nombre: str                              # Nombre del servicio
     descripcion: Optional[str] = None        # Descripción opcional
@@ -161,6 +179,8 @@ class ReporteActividad(BaseModel):
     modalidad: Optional[str] = None
     estado: Optional[str] = None
     nota: Optional[str] = None
+    encargado_servicio: Optional[str] = None
+    jefe_inmediato: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

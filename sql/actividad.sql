@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS servicio_encargado (
     id SERIAL PRIMARY KEY,
     nombre TEXT NOT NULL UNIQUE,
     descripcion TEXT,
+    encargado_servicio VARCHAR(200),
+    jefe_inmediato VARCHAR(200),
     activo BOOLEAN DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT NOW(),
     subdireccion_id INTEGER REFERENCES subdireccion_perteneciente (id) ON DELETE SET NULL ON UPDATE CASCADE
@@ -180,6 +182,8 @@ SELECT
     a.fecha_programada,
     m2.nombre AS mes,
     m2.id AS mes_id,
+    se.jefe_inmediato AS jefe_inmediato,
+    se.encargado_servicio AS encargado_servicio,
     EXTRACT(
         YEAR
         FROM a.fecha_programada

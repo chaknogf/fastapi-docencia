@@ -52,7 +52,7 @@ class Estado(Base):
 # =========================================================
 # Modelo de tabla "subdireccion_perteneciente"
 # =========================================================
-class Subdireccion_Perteneciente(Base):
+class Subdireccion_Perteneciente_Model(Base):
     __tablename__ = "subdireccion_perteneciente"
     __table_args__ = {'extend_existing': True}
 
@@ -62,27 +62,29 @@ class Subdireccion_Perteneciente(Base):
     activo = Column(Boolean, default=True, nullable=False)
 
     # Relación: una subdirección tiene varios servicios
-    servicios = relationship("ServicioEncargado", back_populates="subdireccion")
+    servicios = relationship("Servicio_Encargado_Model", back_populates="subdireccion")
     actividades = relationship("ActividadesModel", back_populates="subdireccion")
 
 
 # =========================================================
 # Modelo de tabla "servicio_encargado"
 # =========================================================
-class ServicioEncargado(Base):
+class Servicio_Encargado_Model(Base):
     __tablename__ = "servicio_encargado"
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(Text, nullable=False)
     descripcion = Column(Text)
+    jefe_inmediato = Column(String(200))
+    encargado_servicio = Column(String(200))
     activo = Column(Boolean, default=True, nullable=False)
 
     # 🔑 Llave foránea hacia subdirección
     subdireccion_id = Column(Integer, ForeignKey("subdireccion_perteneciente.id", ondelete="SET NULL", onupdate="CASCADE"))
 
     # Relaciones inversas
-    subdireccion = relationship("Subdireccion_Perteneciente", back_populates="servicios")
+    subdireccion = relationship("Subdireccion_Perteneciente_Model", back_populates="servicios")
     actividades = relationship("ActividadesModel", back_populates="servicio")  
 
 # =========================================================
@@ -124,8 +126,8 @@ class ActividadesModel(Base):
 
     # Relaciones ORM
     actividad = relationship("Actividad", back_populates="actividades")
-    servicio = relationship("ServicioEncargado", back_populates="actividades")
-    subdireccion = relationship("Subdireccion_Perteneciente", back_populates="actividades")
+    servicio = relationship("Servicio_Encargado_Model", back_populates="actividades")
+    subdireccion = relationship("Subdireccion_Perteneciente_Model", back_populates="actividades")
     modalidad = relationship("Modalidad", back_populates="actividades")
     estado = relationship("Estado", back_populates="actividades")
     mes_obj = relationship("Mes", back_populates="actividades")  # <--- CORRECCIÓN
@@ -178,12 +180,14 @@ class VistaReporte(Base):
     modalidad = Column(String)
     estado = Column(String)
     nota = Column(String)
+    jefe_inmediato = Column(String)
+    encargado_servicio = Column(String)
 
 #==========================
 # Vista ejecución por estado
 # =========================================================
 
-class VistaEjecucion(Base):
+class Vista_Ejecucion_Model(Base):
     __tablename__ = "vista_ejecucion"
     __table_args__ = {"extend_existing": True}
     __mapper_args__ = {"primary_key": ["subdireccion_id", "servicio_id", "mes_id", "anio"]}

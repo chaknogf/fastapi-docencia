@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from app.routes.user import router as user
 from app.routes.actividad import router as actividad
+from app.routes.servicios_responsables import router as servicios
 from app.auth.login import router as login
 
 
@@ -27,6 +28,7 @@ app.add_middleware(
 app.include_router(login)
 app.include_router(user)
 app.include_router(actividad)
+app.include_router(servicios)
 
 
 

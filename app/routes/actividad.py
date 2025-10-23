@@ -11,8 +11,8 @@ from app.database.db import SessionLocal
 from app.models.actividades import (
     ActividadesModel,
     VistaReporte,
-    VistaEjecucion,
-    VistaEjecucion,
+    Vista_Ejecucion_Model,
+    Vista_Ejecucion_Model,
     VistaActividad
 )
 from app.schemas.actividad import (
@@ -226,16 +226,16 @@ async def reporte_ejecucion(
     anio: int | None = Query(None),
     db: SQLAlchemySession = Depends(get_db),
 ):
-    query = db.query(VistaEjecucion)
+    query = db.query(Vista_Ejecucion_Model)
 
     if subdireccion_id:
-        query = query.filter(VistaEjecucion.subdireccion_id == subdireccion_id)
+        query = query.filter(Vista_Ejecucion_Model.subdireccion_id == subdireccion_id)
     if servicio_id:
-        query = query.filter(VistaEjecucion.servicio_id == servicio_id)
+        query = query.filter(Vista_Ejecucion_Model.servicio_id == servicio_id)
     if mes_id:
-        query = query.filter(VistaEjecucion.mes_id == mes_id)
+        query = query.filter(Vista_Ejecucion_Model.mes_id == mes_id)
     if anio:
-        query = query.filter(VistaEjecucion.anio == anio)
+        query = query.filter(Vista_Ejecucion_Model.anio == anio)
 
     resultados = query.all()
 
