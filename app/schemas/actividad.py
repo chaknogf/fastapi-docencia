@@ -40,7 +40,11 @@ class ServiciosEncargadoUpdate(BaseModel):
     id: int
     nombre: str                              # Nombre del servicio
     descripcion: Optional[str] = None        # Descripción opcional
-    activo: bool                             # Estado activo/inactivo
+    jefe_inmediato: Optional[str] = None   # Jefe inmediato del servicio
+    encargado_servicio: Optional[str] = None # Encargado del servicio
+    activo: bool
+    subdireccion_id: int
+    # Estado activo/inactivo
     subdireccion: Optional[SubdireccionPertenecienteSchema] = None  # Relación anidada
     
     model_config = ConfigDict(from_attributes=True)
