@@ -44,7 +44,7 @@ def get_db():
 # =========================
 # ENDPOINT: LISTAR ACTIVIDADES
 # =========================
-@router.get("/servicios_responsables/", response_model=List[ServiciosEncargadoSchema], tags=["servicios_responsables"])
+@router.get("/servicios_responsables/", response_model=List[ServiciosEncargadoUpdate], tags=["servicios_responsables"])
 async def listar_servicios(
     id: Optional[int] = Query(None),
     nombre: Optional[str] = Query(None),
