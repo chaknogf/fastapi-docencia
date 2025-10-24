@@ -51,7 +51,7 @@ async def listar_servicios(
     bool: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1),
-    token: str = Depends(oauth2_scheme),  # Requiere token
+    # token: str = Depends(oauth2_scheme),  # Requiere token
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
@@ -163,3 +163,38 @@ async def desactivar_servicio(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al desactivar el servicio: {e}")
 
+# =========================
+# ENDPOINT: Subdirección
+# =========================
+
+@router.get("/subdireccion/", response_model=List[SubdireccionPertenecienteUpdate], tags=["servicios_responsables"])
+async def listar_servicios(
+    id: Optional[int] = Query(None),
+    nombre: Optional[str] = Query(None),
+    activo: Optional[bool] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    # token: str = Depends(oauth2_scheme),  # Requiere token
+    db: SQLAlchemySession = Depends(get_db)
+):
+    """
+    Lista actividades filtrando por múltiples parámetros opcionales.
+    Los filtros permiten búsquedas exactas o parciales.
+    """
+    try:
+        # Query base de la vista completa de actividades
+        query = db.query(Subdireccion_Perteneciente_Model).order_by(desc(Subdireccion_Perteneciente_Model.id))
+
+        # Aplicar filtros condicionales si se pasan parámetros
+        if id:
+            query = query.filter(Subdireccion_Perteneciente_Model.id == id)
+        if nombre:
+            query = query.filter(Subdireccion_Perteneciente_Model.nombre.ilike(f"%{nombre}%"))
+        if activo:
+            query = query.filter(Subdireccion_Perteneciente_Model.activo == activo)
+        
+        # Aplicar paginación
+        return query.offset(skip).limit(limit).all()
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field as field, ConfigDict
 from datetime import datetime, date
 
@@ -88,8 +88,8 @@ class ActividadBase(BaseModel):
     estado_id: int
     mes_id: Optional[int] = None
     persona_responsable: Optional[Dict[str, "PersonaResponsable"]] = None
-    detalles: Optional["DetallesActividad"] = None
-    metadatos: Optional["MetadatosActividad"] = None
+    detalles: Optional[Any] = None
+    metadatos: Optional[Any] = None
     tiempo_aproximado: Optional[str] = None
     fecha_programada: Optional[date] = None
 

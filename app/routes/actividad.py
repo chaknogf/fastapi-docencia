@@ -110,7 +110,7 @@ async def listar_actividades(
 @router.post("/actividad/crear/", status_code=201, tags=["actividades"])
 async def crear_actividad(
     actividad: ActividadCreate,
-    token: str = Depends(oauth2_scheme),
+    # token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
