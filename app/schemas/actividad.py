@@ -29,7 +29,9 @@ class ServiciosEncargadoSchema(BaseModel):
     descripcion: Optional[str] = None        # Descripción opcional
     jefe_inmediato: Optional[str] = None   # Jefe inmediato del servicio
     encargado_servicio: Optional[str] = None # Encargado del servicio
-    activo: bool                             # Estado activo/inactivo
+    activo: bool
+    subdireccion_id: int
+    # Estado activo/inactivo
     subdireccion: Optional[SubdireccionPertenecienteSchema] = None  # Relación anidada
     
     model_config = ConfigDict(from_attributes=True)

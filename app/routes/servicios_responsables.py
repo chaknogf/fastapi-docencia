@@ -48,7 +48,8 @@ def get_db():
 async def listar_servicios(
     id: Optional[int] = Query(None),
     nombre: Optional[str] = Query(None),
-    bool: Optional[bool] = Query(None),
+    sub: Optional[int] = Query(None),
+    activo: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1),
     # token: str = Depends(oauth2_scheme),  # Requiere token
@@ -67,8 +68,10 @@ async def listar_servicios(
             query = query.filter(Servicio_Encargado_Model.id == id)
         if nombre:
             query = query.filter(Servicio_Encargado_Model.nombre.ilike(f"%{nombre}%"))
-        if bool:
-            query = query.filter(Servicio_Encargado_Model.bool == bool)
+        if sub:
+            query = query.filter(Servicio_Encargado_Model.subdireccion_id == sub)
+        if activo:
+            query = query.filter(Servicio_Encargado_Model.activo == activo)
         
         # Aplicar paginación
         return query.offset(skip).limit(limit).all()
