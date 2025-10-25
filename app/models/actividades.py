@@ -106,7 +106,7 @@ class ActividadesModel(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     tema = Column(Text, nullable=False)
-    
+     
     # Llaves foráneas
     actividad_id = Column(Integer, ForeignKey("actividad.id"), nullable=False)
     servicio_id = Column(Integer, ForeignKey("servicio_encargado.id"), nullable=False)

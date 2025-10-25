@@ -158,7 +158,7 @@ class ActividadCreate(ActividadBase):
 class ActividadUpdate(BaseModel):
     """Schema para actualizar parcialmente una actividad"""
     id: Optional[int] = None
-    ema: str
+    tema: str
     actividad_id: int
     servicio_id: int
     subdireccion_id: int

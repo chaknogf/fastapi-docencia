@@ -16,6 +16,7 @@ from app.models.actividades import (
     VistaActividad
 )
 from app.schemas.actividad import (
+    ActividadBase,
     ActividadCreate,
     ActividadUpdate,
     ActividadVista,
@@ -109,7 +110,7 @@ async def listar_actividades(
 # =========================
 @router.post("/actividad/crear/", status_code=201, tags=["actividades"])
 async def crear_actividad(
-    actividad: ActividadCreate,
+    actividad: ActividadBase, 
     # token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
@@ -117,11 +118,19 @@ async def crear_actividad(
     Crea una nueva actividad en la tabla `actividades`.
     """
     try:
+        # Convertimos el schema a diccionario
+        actividad_dict = actividad.model_dump()
+
+        # 🔹 Eliminamos 'id' si existe para evitar conflicto con autoincrement
+        actividad_dict.pop("id", None)
+
         # Crear instancia del modelo con los datos del schema
-        nueva_actividad = ActividadesModel(**actividad.model_dump())
-        db.add(nueva_actividad)  # Agregar a sesión
-        db.commit()              # Guardar cambios
-        db.refresh(nueva_actividad)  # Refrescar para obtener ID generado
+        nueva_actividad = ActividadesModel(**actividad_dict)
+
+        db.add(nueva_actividad)       # Agregar a sesión
+        db.commit()                   # Guardar cambios
+        db.refresh(nueva_actividad)   # Refrescar para obtener ID generado
+
         return {"message": "Actividad creada exitosamente", "id": nueva_actividad.id}
 
     except SQLAlchemyError as e:
