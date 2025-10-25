@@ -3,6 +3,50 @@ from pydantic import BaseModel, Field as field, ConfigDict
 from datetime import datetime, date
 
 # =========================================================
+# Esquema para Modalidad
+# =========================================================
+class ModalidadSchema(BaseModel):
+    id: int
+    nombre: str
+    codigo: str
+    model_config = ConfigDict(from_attributes=True)
+
+class ModalidadCreate(BaseModel):
+    nombre: str
+    codigo: str
+    model_config = ConfigDict(from_attributes=True)
+
+# =========================================================
+# Esquema para Estado
+# =========================================================
+class EstadoSchema(BaseModel):
+    id: int
+    nombre: str
+    codigo: str
+    model_config = ConfigDict(from_attributes=True)
+    
+class EstadoCreate(BaseModel):
+    nombre: str
+    codigo: str
+    model_config = ConfigDict(from_attributes=True)
+    
+# =========================================================
+#Esquema para Tipo de Actividad
+# =========================================================
+class TipoActividadSchema(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+    activo: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class TipoActividadCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    activo: bool
+    model_config = ConfigDict(from_attributes=True)
+
+# =========================================================
 # Subesquema para Subdirección
 # =========================================================
 class SubdireccionPertenecienteSchema(BaseModel):
