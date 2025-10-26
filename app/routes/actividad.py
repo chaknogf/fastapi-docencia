@@ -86,7 +86,7 @@ async def listar_actividades(
         if actividad:
             query = query.filter(VistaActividad.actividad.ilike(f"%{actividad}%"))
         if servicio_encargado:
-            query = query.filter(VistaActividad.servicio_encargado.ilike(f"%{servicio_encargado}%"))
+            query = query.filter(VistaActividad.servicio_id == servicio_encargado)
         if persona:
             # Filtro JSON: nombre del responsable dentro de persona_responsable
             query = query.filter(VistaActividad.persona_responsable['r0']['nombre'].astext.ilike(f"%{persona}%"))
@@ -99,7 +99,7 @@ async def listar_actividades(
         if entrega:
             query = query.filter(VistaActividad.detalles['fecha_entrega_informe'].astext == entrega)
         if mes:
-            query = query.filter(VistaActividad.detalles['mes'].astext.cast(Integer) == mes)
+            query = query.filter(VistaActividad.mes_id == mes)
 
         # Aplicar paginación
         return query.offset(skip).limit(limit).all()
