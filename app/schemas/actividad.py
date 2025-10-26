@@ -242,15 +242,11 @@ class VistaEjecucionSchema(BaseModel):
     subdireccion: Optional[str] = None
     servicio_id: Optional[int] = None
     servicio_encargado: Optional[str] = None
-    mes_id: Optional[int] = None
-    mes: Optional[str] = None
     anio: Optional[int] = None
     completa: Optional[int] = None
     programada: Optional[int] = None
     reprogramada: Optional[int] = None
     anulada: Optional[int] = None
     total: Optional[int] = None
-    
 
     model_config = ConfigDict(from_attributes=True)
-

@@ -5,7 +5,8 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import desc, func, extract, Integer, cast
+from sqlalchemy import asc, desc, func, extract, Integer, cast
+
 
 from app.database.db import SessionLocal
 from app.models.actividades import (
@@ -227,26 +228,35 @@ async def reporte_vista(
 # =========================
 # ENDPOINT: VISTA DE EJECUCIÓN POR ESTADO
 # =========================
-@router.get("/reporte/ejecucion", tags=["reportes"])
+@router.get(
+    "/reporte/ejecucion",
+    response_model=List[VistaEjecucionSchema],
+    tags=["reportes"]
+)
 async def reporte_ejecucion(
     subdireccion_id: int | None = Query(None),
     servicio_id: int | None = Query(None),
-    mes_id: int | None = Query(None),
     anio: int | None = Query(None),
     db: SQLAlchemySession = Depends(get_db),
 ):
+    """
+    Reporte de ejecución agrupado por subdirección, servicio y año.
+    Permite filtrar opcionalmente por subdirección, servicio o año.
+    """
     query = db.query(Vista_Ejecucion_Model)
 
     if subdireccion_id:
         query = query.filter(Vista_Ejecucion_Model.subdireccion_id == subdireccion_id)
     if servicio_id:
         query = query.filter(Vista_Ejecucion_Model.servicio_id == servicio_id)
-    if mes_id:
-        query = query.filter(Vista_Ejecucion_Model.mes_id == mes_id)
     if anio:
         query = query.filter(Vista_Ejecucion_Model.anio == anio)
 
-    resultados = query.all()
+    resultados = query.order_by(
+        desc(Vista_Ejecucion_Model.anio),
+        asc(Vista_Ejecucion_Model.subdireccion_id),
+        asc(Vista_Ejecucion_Model.servicio_id)
+    ).all()
 
     if not resultados:
         raise HTTPException(status_code=404, detail="No se encontraron resultados de ejecución")

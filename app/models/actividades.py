@@ -186,18 +186,15 @@ class VistaReporte(Base):
 #==========================
 # Vista ejecución por estado
 # =========================================================
-
 class Vista_Ejecucion_Model(Base):
     __tablename__ = "vista_ejecucion"
     __table_args__ = {"extend_existing": True}
-    __mapper_args__ = {"primary_key": ["subdireccion_id", "servicio_id", "mes_id", "anio"]}
+    __mapper_args__ = {"primary_key": ["subdireccion_id", "servicio_id", "anio"]}
 
-    subdireccion_id = Column(Integer, primary_key=True)
-    subdireccion = Column(String)
     servicio_id = Column(Integer, primary_key=True)
     servicio_encargado = Column(String)
-    mes_id = Column(Integer, primary_key=True)
-    mes = Column(String)
+    subdireccion_id = Column(Integer, primary_key=True)
+    subdireccion = Column(String(80))
     anio = Column(Integer, primary_key=True)
 
     completa = Column(Integer)
@@ -205,4 +202,3 @@ class Vista_Ejecucion_Model(Base):
     reprogramada = Column(Integer)
     anulada = Column(Integer)
     total = Column(Integer)
-
