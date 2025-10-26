@@ -251,3 +251,31 @@ GROUP BY
     s.nombre,
     anio
 ORDER BY anio DESC, s.id ASC, se.id ASC;
+
+CREATE OR REPLACE VIEW resumen_anual AS
+SELECT
+    EXTRACT(
+        YEAR
+        FROM a.fecha_programada
+    )::INT AS anio,
+    COUNT(*) FILTER (
+        WHERE
+            a.estado_id = 1
+    ) AS programadas,
+    COUNT(*) FILTER (
+        WHERE
+            a.estado_id = 2
+    ) AS reprogramadas,
+    COUNT(*) FILTER (
+        WHERE
+            a.estado_id = 3
+    ) AS completadas,
+    COUNT(*) FILTER (
+        WHERE
+            a.estado_id = 4
+    ) AS anuladas,
+    COUNT(*) AS total
+FROM actividades a
+GROUP BY
+    anio
+ORDER BY anio DESC;

@@ -11,6 +11,7 @@ from sqlalchemy import asc, desc, func, extract, Integer, cast
 from app.database.db import SessionLocal
 from app.models.actividades import (
     ActividadesModel,
+    ResumenAnualModel,
     VistaReporte,
     Vista_Ejecucion_Model,
     Vista_Ejecucion_Model,
@@ -22,6 +23,7 @@ from app.schemas.actividad import (
     ActividadUpdate,
     ActividadVista,
     ReporteActividad,
+    ResumenAnualSchema,
     VistaEjecucionSchema,
    
 )
@@ -262,3 +264,15 @@ async def reporte_ejecucion(
         raise HTTPException(status_code=404, detail="No se encontraron resultados de ejecución")
 
     return resultados
+
+@router.get("/reporte/resumen-anual", response_model=List[ResumenAnualSchema], tags=["reportes"])
+async def reporte_resumen_anual(
+    anio: Optional[int] = None,
+    db: SQLAlchemySession = Depends(get_db)
+):
+    query = db.query(ResumenAnualModel)
+    
+    if anio is not None:
+        query = query.filter(ResumenAnualModel.anio == anio)
+
+    return query.order_by(ResumenAnualModel.anio.desc()).all()

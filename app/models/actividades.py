@@ -202,3 +202,13 @@ class Vista_Ejecucion_Model(Base):
     reprogramada = Column(Integer)
     anulada = Column(Integer)
     total = Column(Integer)
+
+class ResumenAnualModel(Base):
+    __tablename__ = "resumen_anual"
+
+    anio = Column(Integer, primary_key=True)
+    programadas = Column(Integer)
+    reprogramadas = Column(Integer)
+    completadas = Column(Integer)
+    anuladas = Column(Integer)
+    total = Column(Integer)

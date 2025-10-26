@@ -250,3 +250,16 @@ class VistaEjecucionSchema(BaseModel):
     total: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+    
+    
+class ResumenAnualSchema(BaseModel):
+    anio: Optional[int] = None
+    programadas: Optional[int] = 0
+    reprogramadas: Optional[int] = 0
+    completadas: Optional[int] = 0
+    anuladas: Optional[int] = 0
+    total: Optional[int] = 0
+
+    model_config = ConfigDict(from_attributes=True)
+    
+   
