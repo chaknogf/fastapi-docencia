@@ -246,8 +246,9 @@ class VistaEjecucionSchema(BaseModel):
     completa: Optional[int] = None
     programada: Optional[int] = None
     reprogramada: Optional[int] = None
-    anulada: Optional[int] = None
+    suspendida: Optional[int] = None
     total: Optional[int] = None
+    ejecutado: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
     

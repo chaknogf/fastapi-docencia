@@ -7,30 +7,19 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import date, datetime, time
 from app.database.db import SessionLocal
+from app.database.security import create_access_token
 from app.models.user import UserModel
 from sqlalchemy.orm import Session as SQLAlchemySession
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
-from app.schemas.schemas import UserCreate, UserBase, UserResponse
+from app.schemas.schemas import TokenResponse, UserCreate, UserBase, UserResponse
+from app.config.mail_config import conf
+import asyncio
+from fastapi_mail import FastMail, MessageSchema, MessageType
 
 
 
 
-
-
-class Userschema(BaseModel):
-   
-    nombre: str | None = None
-    username: str | None = None
-    email: EmailStr | None = None
-    role: str | None = None
-    password: str | None = None
-    estado: str | None = None
-    
-
-
-    class Config:
-        from_attributes = True
 
 
 
@@ -139,3 +128,50 @@ async def delete_user(
         raise HTTPException(status_code=500, detail=str(e))
     
     
+# ==============================
+# CREAR USUARIO Y ENVIAR CORREO
+# ==============================
+@router.post("/user/registro", tags=["users"])
+async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db)):
+    try:
+        # 🔐 Cifrar contraseña
+        if user.password:
+            user.password = pwd_context.hash(user.password)
+
+        # 📦 Crear usuario
+        new_user = UserModel(**user.model_dump())
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        # 💌 Enviar correo de bienvenida
+        fm = FastMail(conf)
+        message = MessageSchema(
+            subject="Bienvenido a Docencia Tecpán 🎉",
+            recipients=[new_user.email],
+            body=f"""
+            <h2>¡Hola {new_user.nombre}!</h2>
+            <p>Tu cuenta ha sido creada exitosamente en el sistema de docencia.</p>
+            <p>Ingresa a  https://https://hgtecpan.duckdns.org/eventos</p>
+            <p><b>Usuario:</b> {new_user.username}</p>
+            <p><b>Correo:</b> {new_user.email}</p>
+            <p>¡Bienvenido a bordo!</p>
+            """,
+            subtype=MessageType.html
+        )
+
+        await fm.send_message(message)
+
+        return JSONResponse(status_code=201, content={
+            "message": "Usuario creado exitosamente y correo enviado",
+            "usuario": {
+                "nombre": new_user.nombre,
+                "email": new_user.email,
+                "username": new_user.username
+            }
+        })
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al enviar correo: {e}")

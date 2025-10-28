@@ -200,8 +200,9 @@ class Vista_Ejecucion_Model(Base):
     completa = Column(Integer)
     programada = Column(Integer)
     reprogramada = Column(Integer)
-    anulada = Column(Integer)
+    suspendida = Column(Integer)
     total = Column(Integer)
+    ejecutado = Column(Float)
 
 class ResumenAnualModel(Base):
     __tablename__ = "resumen_anual"

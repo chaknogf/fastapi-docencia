@@ -13,9 +13,13 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL,
     estado CHAR(1),
+    servicio_id INT, -- 🔹 Nueva columna para asociar el usuario a un servicio
     creado_en TIMESTAMP DEFAULT NOW(),
-    actualizado_en TIMESTAMP DEFAULT NOW()
+    actualizado_en TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT fk_servicio FOREIGN KEY (servicio_id) REFERENCES servicio_encargado (id) ON UPDATE CASCADE ON DELETE SET NULL
 );
+
+ALTER TABLE users ADD COLUMN google_id VARCHAR(100) UNIQUE NULL;
 
 INSERT INTO
     users (
@@ -220,23 +224,34 @@ SELECT
 -- Conteos por estado
 COUNT(*) FILTER (
     WHERE
-        e.nombre ILIKE '%completa%'
+        e.id = 3
 ) AS completa,
 COUNT(*) FILTER (
     WHERE
-        e.nombre ILIKE '%programada%'
+        e.id = 1
 ) AS programada,
 COUNT(*) FILTER (
     WHERE
-        e.nombre ILIKE '%reprogramada%'
+        e.id = 2
 ) AS reprogramada,
 COUNT(*) FILTER (
     WHERE
-        e.nombre ILIKE '%anulada%'
-) AS anulada,
+        e.id = 4
+) AS suspendida,
 
 -- Total general
-COUNT(*) AS total
+COUNT(*) AS total,
+
+-- Proporción ejecutada 0-1
+CASE
+    WHEN COUNT(*) = 0 THEN 0
+    ELSE (
+        COUNT(*) FILTER (
+            WHERE
+                e.id = 3
+        )
+    )::numeric / COUNT(*)
+END AS ejecutado
 FROM
     actividades a
     LEFT JOIN servicio_encargado se ON a.servicio_id = se.id

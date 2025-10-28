@@ -236,9 +236,10 @@ async def reporte_vista(
     tags=["reportes"]
 )
 async def reporte_ejecucion(
-    subdireccion_id: int | None = Query(None),
+    sub: int | None = Query(None),
     servicio_id: int | None = Query(None),
     anio: int | None = Query(None),
+    ejecutado: float | None = Query(None),
     db: SQLAlchemySession = Depends(get_db),
 ):
     """
@@ -247,12 +248,14 @@ async def reporte_ejecucion(
     """
     query = db.query(Vista_Ejecucion_Model)
 
-    if subdireccion_id:
-        query = query.filter(Vista_Ejecucion_Model.subdireccion_id == subdireccion_id)
+    if sub:
+        query = query.filter(Vista_Ejecucion_Model.subdireccion_id == sub)
     if servicio_id:
         query = query.filter(Vista_Ejecucion_Model.servicio_id == servicio_id)
     if anio:
         query = query.filter(Vista_Ejecucion_Model.anio == anio)
+    if ejecutado is not None:
+        query = query.filter(Vista_Ejecucion_Model.ejecutado > ejecutado)
 
     resultados = query.order_by(
         desc(Vista_Ejecucion_Model.anio),

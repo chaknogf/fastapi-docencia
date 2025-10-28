@@ -23,6 +23,8 @@ class UserBase(BaseModel):
     password: str
     role: str
     estado: str = "A"
+    servicio_id: Optional[int] = None
+    # google_id: Optional[str] = None
 
 class UserCreate(UserBase):
     pass  # No incluir 'id'
