@@ -205,7 +205,8 @@ async def eliminar_actividad(
 async def reporte_vista(
     mes: Optional[int] = Query(None, description="Número del mes (1-12)"),
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
-    subdireccion: Optional[str] = Query(None, description="ID de la subdirección"),
+    subId: Optional[int] = Query(None, description="ID de la subdirección"),
+    servicioId: Optional[int] = Query(None, description='ID de el servicio responsable'),
     db: SQLAlchemySession = Depends(get_db),
     # token: str = Depends(oauth2_scheme)
 ):
@@ -217,8 +218,10 @@ async def reporte_vista(
         query = query.filter(VistaReporte.mes_id == mes)
     if anio is not None:
         query = query.filter(VistaReporte.anio == anio)
-    if subdireccion is not None:
-        query = query.filter(VistaReporte.subdireccion == subdireccion)
+    if subId is not None:
+        query = query.filter(VistaReporte.subdireccion_id == subId)
+    if servicioId  is not None:
+        query = query.filter(VistaReporte.servicio_id == servicioId)
     reportes = query.all()
     
     if not reportes:
@@ -269,7 +272,7 @@ async def reporte_ejecucion(
     return resultados
 
 @router.get("/reporte/resumen-anual", response_model=List[ResumenAnualSchema], tags=["reportes"])
-async def reporte_resumen_anual(
+async def reporte_resumen_anual( 
     anio: Optional[int] = None,
     db: SQLAlchemySession = Depends(get_db)
 ):

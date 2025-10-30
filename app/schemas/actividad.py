@@ -221,7 +221,9 @@ class ReporteActividad(BaseModel):
     tema: str
     actividad: str
     subdireccion: Optional[str] = None
+    subdireccion_id: Optional[int] = None
     servicio_encargado: Optional[str] = None
+    servicio_id: Optional[int] = None
     fecha_programada: Optional[date] = None
     mes: Optional[str] = None
     mes_id: Optional[int] = None
