@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, ConfigDict
+from typing import Optional
+from datetime import datetime
 
 class LoginRequest(BaseModel):
     email: str
@@ -12,9 +14,7 @@ class TokenResponse(BaseModel):
 
 # schemas.py o models.py
 
-from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import Optional
-from datetime import datetime
+
 
 class UserBase(BaseModel):
     nombre: str

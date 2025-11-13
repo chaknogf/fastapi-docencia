@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Date, Boolean, CHAR, ForeignKey, DateTime, Float, BigInteger
+from sqlalchemy import Column, Integer, String, Text, Date, Boolean, CHAR, ForeignKey, DateTime, Float, BigInteger, Time
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, deferred
 from datetime import datetime
@@ -86,6 +86,18 @@ class Servicio_Encargado_Model(Base):
     # Relaciones inversas
     subdireccion = relationship("Subdireccion_Perteneciente_Model", back_populates="servicios")
     actividades = relationship("ActividadesModel", back_populates="servicio")  
+    
+    
+# =========================================================
+#Modelo de lugar de realizacion
+# =========================================================
+
+class Lugar_De_Realiazcion_Model(Base):
+    __tablename__ = "lugar_de_realizacion"
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(150), nullable=False, unique=True)
+    descripcion = Column(String(200), nullable=True)
+
 
 # =========================================================
 # Modelo de tabla "meses"
@@ -123,6 +135,8 @@ class ActividadesModel(Base):
     # Campos generales
     tiempo_aproximado = Column(String(50), nullable=True)
     fecha_programada = Column(Date, nullable=True)
+    horario_programado = Column(Time, nullable=True)
+    lugar = Column(Integer, nullable=True)
 
     # Relaciones ORM
     actividad = relationship("Actividad", back_populates="actividades")
@@ -151,6 +165,9 @@ class VistaActividad(Base):
     persona_responsable = Column(JSONB)
     tiempo_aproximado = Column(String)
     fecha_programada = Column(Date)
+    horario_programado = Column(Time)
+    lugar_id = Column(Integer)
+    lugar = Column(String)
     mes = Column(String)
     mes_id = Column(Integer)
     anio = Column(Integer)
@@ -176,6 +193,9 @@ class VistaReporte(Base):
     subdireccion = Column(String)
     subdireccion_id = Column(Integer)
     fecha_programada = Column(Date)
+    lugar_id = Column(Integer)
+    lugar = Column(String)
+    horario_programado = Column(Time)
     mes = Column(String)
     mes_id = Column(Integer)
     anio = Column(Integer)

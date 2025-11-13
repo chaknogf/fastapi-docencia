@@ -6,6 +6,8 @@ from app.routes.otros_valores import router as otros_valores
 from app.routes.user import router as user
 from app.routes.actividad import router as actividad
 from app.routes.servicios_responsables import router as servicios
+from app.routes.funciones import router as funciones
+from app.routes.asistencia import router as asistencia
 from app.auth.login import router as login
 
 
@@ -31,6 +33,8 @@ app.include_router(user)
 app.include_router(actividad)
 app.include_router(servicios)
 app.include_router(otros_valores)
+app.include_router(funciones)
+app.include_router(asistencia)
 
 
 

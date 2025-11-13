@@ -66,7 +66,7 @@ async def listar_actividades(
     entrega: Optional[str] = Query(None),
     mes: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1),
+    limit: int = Query(100, ge=1),
     # token: str = Depends(oauth2_scheme),  # Requiere token
     db: SQLAlchemySession = Depends(get_db)
 ):

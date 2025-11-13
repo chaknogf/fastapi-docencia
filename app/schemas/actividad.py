@@ -1,6 +1,8 @@
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field as field, ConfigDict
-from datetime import datetime, date
+from datetime import datetime, date, time
+
+from sqlalchemy import Time
 
 # =========================================================
 # Esquema para Modalidad
@@ -28,6 +30,20 @@ class EstadoSchema(BaseModel):
 class EstadoCreate(BaseModel):
     nombre: str
     codigo: str
+    model_config = ConfigDict(from_attributes=True)
+    
+# =========================================================
+#Esquema para Lugar de la actividad
+# =========================================================
+class LugarSchema(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class LugarCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
     
 # =========================================================
@@ -190,7 +206,10 @@ class ActividadVista(BaseModel):
 
     persona_responsable: Optional[Dict[str, PersonaResponsable]] = None
     tiempo_aproximado: Optional[str] = None
-    fecha_programada: Optional[date] = None  #
+    fecha_programada: Optional[date] = None
+    horario_programado: Optional[time] = None
+    lugar_id: Optional[int] = None
+    lugar: Optional[str] = None  
     mes: Optional[str] = None
     mes_id: Optional[int] = None
     anio: Optional[int] = None
@@ -225,6 +244,9 @@ class ReporteActividad(BaseModel):
     servicio_encargado: Optional[str] = None
     servicio_id: Optional[int] = None
     fecha_programada: Optional[date] = None
+    horario_programado: Optional[time] = None
+    lugar_id: Optional[int] = None
+    lugar: Optional[str] = None
     mes: Optional[str] = None
     mes_id: Optional[int] = None
     anio: Optional[int] = None

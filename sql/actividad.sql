@@ -90,6 +90,15 @@ CREATE TABLE IF NOT EXISTS estado (
     nombre VARCHAR(50) NOT NULL
 );
 
+-- Lugares_de_Realizacion
+CREATE TABLE IF NOT EXISTS lugares_de_realizacion (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL UNIQUE,
+    descripcion VARCHAR(200) NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_lugares_nombre ON lugares_de_realizacion (nombre);
+
 -- 📅 Meses
 CREATE TABLE IF NOT EXISTS meses (
     id SERIAL PRIMARY KEY, -- 1 a 12
@@ -122,6 +131,8 @@ CREATE TABLE IF NOT EXISTS actividades (
     persona_responsable JSONB,
     tiempo_aproximado VARCHAR(50),
     fecha_programada DATE,
+    horario_programado TIME NULL,
+    lugar INTEGER NULL,
     modalidad_id INTEGER REFERENCES modalidad (id) ON UPDATE CASCADE ON DELETE SET NULL,
     estado_id INTEGER REFERENCES estado (id) ON UPDATE CASCADE ON DELETE SET NULL,
     detalles JSONB,
@@ -149,6 +160,9 @@ SELECT
     a.persona_responsable,
     a.tiempo_aproximado,
     a.fecha_programada,
+    a.horario_programado,
+    a.lugar AS lugar_id,
+    ldr.nombre AS lugar,
     m2.id AS mes_id,
     m2.nombre AS mes,
     EXTRACT(
@@ -168,7 +182,8 @@ FROM
     LEFT JOIN subdireccion_perteneciente s ON se.subdireccion_id = s.id
     LEFT JOIN modalidad mo ON a.modalidad_id = mo.id
     LEFT JOIN estado e ON a.estado_id = e.id
-    LEFT JOIN meses m2 ON a.mes_id = m2.id;
+    LEFT JOIN meses m2 ON a.mes_id = m2.id
+    LEFT JOIN lugares_de_realizacion ldr ON a.lugar = ldr.id;
 
 -- ==========================================================
 -- 🌐 VISTA: vista_reporte
@@ -186,6 +201,9 @@ SELECT
     su.nombre AS subdireccion,
     su.id AS subdireccion_id,
     a.fecha_programada,
+    a.horario_programado,
+    a.lugar AS lugar_id,
+    ldr.nombre AS lugar,
     m2.nombre AS mes,
     m2.id AS mes_id,
     se.jefe_inmediato AS jefe_inmediato,
@@ -204,6 +222,7 @@ FROM
     LEFT JOIN subdireccion_perteneciente su ON se.subdireccion_id = su.id
     LEFT JOIN modalidad mo ON a.modalidad_id = mo.id
     LEFT JOIN estado e ON a.estado_id = e.id
+    LEFT JOIN lugares_de_realizacion ldr ON a.lugar = ldr.id
     LEFT JOIN meses m2 ON a.mes_id = m2.id;
 
 -- ==========================================================
@@ -296,3 +315,44 @@ FROM actividades a
 GROUP BY
     anio
 ORDER BY anio DESC;
+
+-- ==========================================
+-- TABLA: sexo
+-- ==========================================
+CREATE TABLE sexo (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(20) UNIQUE NOT NULL
+);
+
+-- ==========================================
+-- TABLA: grupo_edad
+-- ==========================================
+CREATE TABLE grupo_edad (
+    id SERIAL PRIMARY KEY,
+    rango VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- ==========================================
+-- TABLA: pertenencia_cultural
+-- ==========================================
+CREATE TABLE pertenencia_cultural (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- ==========================================
+-- TABLA: asistencia
+-- ==========================================
+CREATE TABLE asistencia (
+    id SERIAL PRIMARY KEY,
+    nombre_completo VARCHAR(150) NOT NULL,
+    sexo_id INT REFERENCES sexo (id) ON DELETE SET NULL,
+    grupo_edad_id INT REFERENCES grupo_edad (id) ON DELETE SET NULL,
+    cui BIGINT,
+    puesto_funcional VARCHAR(100),
+    pertenencia_cultural_id INT REFERENCES pertenencia_cultural (id) ON DELETE SET NULL,
+    telefono_email VARCHAR(150),
+    datos_extras JSONB,
+    capacitacion_id INT NOT NULL REFERENCES actividades (id) ON DELETE CASCADE,
+    fecha_registro TIMESTAMP DEFAULT NOW()
+);
