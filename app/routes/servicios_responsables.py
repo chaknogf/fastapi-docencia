@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import desc, func, extract, Integer, cast
 
 from app.database.db import SessionLocal
@@ -42,7 +43,7 @@ def get_db():
 
 
 # =========================
-# ENDPOINT: LISTAR ACTIVIDADES
+# ENDPOINT: LISTAR SERVICIOS
 # =========================
 @router.get("/servicios_responsables/", response_model=List[ServiciosEncargadoUpdate], tags=["servicios_responsables"])
 async def listar_servicios(
@@ -81,7 +82,7 @@ async def listar_servicios(
 
 
 # =========================
-# ENDPOINT: CREAR ACTIVIDAD
+# ENDPOINT: CREAR SERVICIOS
 # =========================
 @router.post("/servicios_responsables/crear/", status_code=201, tags=["servicios_responsables"])
 async def crear_servicio_responsable(
@@ -89,22 +90,36 @@ async def crear_servicio_responsable(
     token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db)
 ):
-    """
-    Crea una nuevo Servicio Responsable en la tabla `servicios_responsables`.
-    """
     try:
-        # Crear instancia del modelo con los datos del schema
+      
+
         nuevo_servicio = Servicio_Encargado_Model(**servicio.model_dump())
-        db.add(nuevo_servicio)  # Agregar a sesión
-        db.commit()              # Guardar cambios
-        db.refresh(nuevo_servicio)  # Refrescar para obtener ID generado
-        return {"message": "Servicio creado exitosamente", "id": nuevo_servicio.id}
+        db.add(nuevo_servicio)
+        db.commit()
+        db.refresh(nuevo_servicio)
+
+        return JSONResponse(status_code=200, content={"message": "created successfully"})
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "message": "Conflicto: este servicio ya existe o viola una restricción única."
+            }
+        )
 
     except SQLAlchemyError as e:
-        db.rollback()  # Deshacer cambios en caso de error
-        raise HTTPException(status_code=500, detail=str(e))
-
-
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": "Error interno al crear el servicio.",
+                "details": str(e)
+            }
+        )
 # =========================
 # ENDPOINT: ACTUALIZAR ACTIVIDAD
 # =========================
@@ -119,22 +134,50 @@ async def actualizar_servicio(
     Actualiza un servicio existente. Solo actualiza los campos enviados.
     """
     try:
-        db_actividad = db.query(Servicio_Encargado_Model).filter(Servicio_Encargado_Model.id == servicio_id).first()
-        if not db_actividad:
-            raise HTTPException(status_code=404, detail="Actividad no encontrada")
+        db_servicio = (
+            db.query(Servicio_Encargado_Model)
+            .filter(Servicio_Encargado_Model.id == servicio_id)
+            .first()
+        )
 
-        # Actualiza solo los campos que se pasaron en el request
-        for key, value in Servicio_Encargado_Model.model_dump(exclude_unset=True).items():
-            setattr(db_actividad, key, value)
+        if not db_servicio:
+            raise HTTPException(
+                status_code=404,
+                detail={"status": "error", "message": "Servicio no encontrado"}
+            )
+
+        # Obtener solo campos enviados por el usuario
+        update_data = servicio.model_dump(exclude_unset=True)
+
+        # Evitar que intenten actualizar el ID
+        update_data.pop("id", None)
+
+        # Evitar campos anidados que no pertenecen al modelo
+        update_data.pop("subdireccion", None)
+
+        # Actualizar cada campo enviado
+        for key, value in update_data.items():
+            setattr(db_servicio, key, value)
 
         db.commit()
-        db.refresh(db_actividad)
-        return {"message": "Servicio actualizado exitosamente"}
+        db.refresh(db_servicio)
+
+        return {
+            "status": "success",
+            "message": "Servicio actualizado exitosamente",
+            "data": {"id": db_servicio.id}
+        }
 
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": "Error interno al actualizar el servicio",
+                "details": str(e)
+            }
+        )
 
 # =========================
 # ENDPOINT: DESACTIVAR SERVICIO

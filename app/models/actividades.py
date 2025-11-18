@@ -6,6 +6,32 @@ from app.database.db import Base
 
 
 # =========================================================
+# Modelo de tabla "lugares_de_realizacion"
+# =========================================================
+class LugaresModel(Base):
+    __tablename__ = "lugares_de_realizacion"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(100), nullable=False)
+    descripcion = Column(Text)
+    
+
+    # Relación con ActividadesModel
+    # actividades = relationship("ActividadesModel", back_populates="actividad")
+
+# =========================================================
+# Modelo de tabla "grupo_edad"
+# =========================================================
+class GrupoEdadModel(Base):
+    __tablename__ = "grupo_edad"
+    __table_args__ = {'extend_existing': True}
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    rango = Column(String(50), nullable=False)
+    
+
+# =========================================================
 # Modelo de tabla "actividad"
 # =========================================================
 class Actividad(Base):
@@ -59,9 +85,9 @@ class Subdireccion_Perteneciente_Model(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(80), nullable=False)
     descripcion = Column(Text)
+    persona_encargada = Column(String(150))
     activo = Column(Boolean, default=True, nullable=False)
 
-    # Relación: una subdirección tiene varios servicios
     servicios = relationship("Servicio_Encargado_Model", back_populates="subdireccion")
     actividades = relationship("ActividadesModel", back_populates="subdireccion")
 
@@ -74,19 +100,19 @@ class Servicio_Encargado_Model(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    nombre = Column(Text, nullable=False)
+    nombre = Column(Text, nullable=False, unique=True)
     descripcion = Column(Text)
-    jefe_inmediato = Column(String(200))
+    # jefe_inmediato = Column(String(200))
     encargado_servicio = Column(String(200))
     activo = Column(Boolean, default=True, nullable=False)
 
-    # 🔑 Llave foránea hacia subdirección
-    subdireccion_id = Column(Integer, ForeignKey("subdireccion_perteneciente.id", ondelete="SET NULL", onupdate="CASCADE"))
+    subdireccion_id = Column(
+        Integer,
+        ForeignKey("subdireccion_perteneciente.id", ondelete="SET NULL", onupdate="CASCADE")
+    )
 
-    # Relaciones inversas
     subdireccion = relationship("Subdireccion_Perteneciente_Model", back_populates="servicios")
-    actividades = relationship("ActividadesModel", back_populates="servicio")  
-    
+    actividades = relationship("ActividadesModel", back_populates="servicio")
     
 # =========================================================
 #Modelo de lugar de realizacion
@@ -136,7 +162,7 @@ class ActividadesModel(Base):
     tiempo_aproximado = Column(String(50), nullable=True)
     fecha_programada = Column(Date, nullable=True)
     horario_programado = Column(Time, nullable=True)
-    lugar = Column(Integer, nullable=True)
+    lugar_id = Column(Integer, nullable=True)
 
     # Relaciones ORM
     actividad = relationship("Actividad", back_populates="actividades")

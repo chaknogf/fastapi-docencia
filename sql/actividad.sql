@@ -49,6 +49,7 @@ VALUES (
 CREATE TABLE IF NOT EXISTS subdireccion_perteneciente (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(80) NOT NULL UNIQUE,
+    persona_encargada VARCHAR(150),
     descripcion TEXT,
     activo BOOLEAN DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT NOW()
@@ -63,7 +64,8 @@ CREATE TABLE IF NOT EXISTS servicio_encargado (
     jefe_inmediato VARCHAR(200),
     activo BOOLEAN DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT NOW(),
-    subdireccion_id INTEGER REFERENCES subdireccion_perteneciente (id) ON DELETE SET NULL ON UPDATE CASCADE
+    subdireccion_id INT,
+    CONSTRAINT fk_sub FOREIGN KEY (subdireccion_id) REFERENCES subdireccion_perteneciente (id) ON UPDATE CASCADE ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_servicio_subdireccion_id ON servicio_encargado (subdireccion_id);
@@ -132,7 +134,7 @@ CREATE TABLE IF NOT EXISTS actividades (
     tiempo_aproximado VARCHAR(50),
     fecha_programada DATE,
     horario_programado TIME NULL,
-    lugar INTEGER NULL,
+    lugar_id INTEGER NULL,
     modalidad_id INTEGER REFERENCES modalidad (id) ON UPDATE CASCADE ON DELETE SET NULL,
     estado_id INTEGER REFERENCES estado (id) ON UPDATE CASCADE ON DELETE SET NULL,
     detalles JSONB,
@@ -161,7 +163,7 @@ SELECT
     a.tiempo_aproximado,
     a.fecha_programada,
     a.horario_programado,
-    a.lugar AS lugar_id,
+    a.lugar_id,
     ldr.nombre AS lugar,
     m2.id AS mes_id,
     m2.nombre AS mes,
@@ -183,7 +185,7 @@ FROM
     LEFT JOIN modalidad mo ON a.modalidad_id = mo.id
     LEFT JOIN estado e ON a.estado_id = e.id
     LEFT JOIN meses m2 ON a.mes_id = m2.id
-    LEFT JOIN lugares_de_realizacion ldr ON a.lugar = ldr.id;
+    LEFT JOIN lugares_de_realizacion ldr ON a.lugar_id = ldr.id;
 
 -- ==========================================================
 -- 🌐 VISTA: vista_reporte
@@ -202,7 +204,7 @@ SELECT
     su.id AS subdireccion_id,
     a.fecha_programada,
     a.horario_programado,
-    a.lugar AS lugar_id,
+    a.lugar_id,
     ldr.nombre AS lugar,
     m2.nombre AS mes,
     m2.id AS mes_id,
@@ -222,7 +224,7 @@ FROM
     LEFT JOIN subdireccion_perteneciente su ON se.subdireccion_id = su.id
     LEFT JOIN modalidad mo ON a.modalidad_id = mo.id
     LEFT JOIN estado e ON a.estado_id = e.id
-    LEFT JOIN lugares_de_realizacion ldr ON a.lugar = ldr.id
+    LEFT JOIN lugares_de_realizacion ldr ON a.lugar_id = ldr.id
     LEFT JOIN meses m2 ON a.mes_id = m2.id;
 
 -- ==========================================================

@@ -11,7 +11,9 @@ from app.database.db import SessionLocal
 from app.models.actividades import (
    Modalidad,
    Actividad,
-   Estado
+   Estado,
+   LugaresModel,
+   GrupoEdadModel
 )
 from app.schemas.actividad import (
     ModalidadSchema,
@@ -19,9 +21,21 @@ from app.schemas.actividad import (
     EstadoCreate,
     EstadoSchema,
     TipoActividadCreate,
-    TipoActividadSchema
-    
+    TipoActividadSchema,
+   
+
 )
+
+
+from app.schemas.otras import (
+    LugaresSchema,
+    LugaresUpdate,
+    GrupoEdadSchema,
+    GrupoEdadUpdate
+)
+
+
+
 
 # =========================
 # ROUTER Y SEGURIDAD
@@ -50,6 +64,7 @@ def get_model_Estado() -> Type[Estado]:
     return Estado
 def get_model_Modalidad() -> Type[Modalidad]:
     return Modalidad
+
 # =========================
 # ENDPOINT: LISTAR TIPO DE ACTIVIDAD
 # =========================
@@ -59,7 +74,7 @@ async def listar_actividad(
     activo: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1),
-    token: str = Depends(oauth2_scheme),  # Requiere token
+    # token: str = Depends(oauth2_scheme),  # Requiere token
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Actividad] = Depends(get_model_Actividad)
 ):
@@ -132,7 +147,7 @@ async def listar_modalidades(
     activo: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1),
-    token: str = Depends(oauth2_scheme),
+    # token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Modalidad] = Depends(get_model_Modalidad)
 ):
@@ -210,7 +225,7 @@ async def listar_estados(
     activo: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1),
-    token: str = Depends(oauth2_scheme),
+    # token: str = Depends(oauth2_scheme),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Estado] = Depends(get_model_Estado)
 ):
@@ -277,3 +292,47 @@ async def actualizar_estado(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
+    
+# =========================
+# ENDPOINT: LISTAR LUGARES
+# =========================
+@router.get("/lugareRealizacion/", response_model=List[LugaresSchema], tags=["otros"])
+async def listar_lugares(
+    id: Optional[int] = Query(None),
+    db: SQLAlchemySession = Depends(get_db),
+    
+):
+    try:
+        query = db.query(LugaresModel)
+
+        if id is not None:
+            query = query.filter(LugaresModel.id == id)
+
+        return query.order_by(desc(LugaresModel.id)).all()
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
+        
+# =========================
+# ENDPOINT: LISTAR GRUPOS DE EDAD
+# =========================
+@router.get("/gruposEdad/", response_model=List[GrupoEdadSchema], tags=["otros"])
+async def listar_grupos_de_edad(
+    id: Optional[int] = Query(None),
+    db: SQLAlchemySession = Depends(get_db),
+    
+):
+    try:
+        query = db.query(GrupoEdadModel)
+
+        if id is not None:
+            query = query.filter(GrupoEdadModel.id == id)
+
+        return query.order_by(desc(GrupoEdadModel.id)).all()
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        

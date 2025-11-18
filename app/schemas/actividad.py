@@ -69,6 +69,7 @@ class SubdireccionPertenecienteSchema(BaseModel):
     
     nombre: str                              # Nombre de la subdirección
     descripcion: Optional[str] = None        # Descripción opcional
+    persona_encargada: Optional[str] = None
     activo: bool                             # Estado activo/inactivo
     
     model_config = ConfigDict(from_attributes=True)
@@ -77,6 +78,7 @@ class SubdireccionPertenecienteUpdate(BaseModel):
     id: int
     nombre: str                              # Nombre de la subdirección
     descripcion: Optional[str] = None        # Descripción opcional
+    persona_encargada: Optional[str] = None
     activo: bool                             # Estado activo/inactivo
     
     model_config = ConfigDict(from_attributes=True)
@@ -87,26 +89,17 @@ class SubdireccionPertenecienteUpdate(BaseModel):
 class ServiciosEncargadoSchema(BaseModel):
     nombre: str                              # Nombre del servicio
     descripcion: Optional[str] = None        # Descripción opcional
-    jefe_inmediato: Optional[str] = None   # Jefe inmediato del servicio
+    # jefe_inmediato: Optional[str] = None   # Jefe inmediato del servicio
     encargado_servicio: Optional[str] = None # Encargado del servicio
     activo: bool
-    subdireccion_id: int
+    subdireccion_id: Optional[int] = None
     # Estado activo/inactivo
-    subdireccion: Optional[SubdireccionPertenecienteSchema] = None  # Relación anidada
-    
     model_config = ConfigDict(from_attributes=True)
 
-class ServiciosEncargadoUpdate(BaseModel):
+class ServiciosEncargadoUpdate(ServiciosEncargadoSchema):
     id: int
-    nombre: str                              # Nombre del servicio
-    descripcion: Optional[str] = None        # Descripción opcional
-    jefe_inmediato: Optional[str] = None   # Jefe inmediato del servicio
-    encargado_servicio: Optional[str] = None # Encargado del servicio
-    activo: bool
-    subdireccion_id: int
-    # Estado activo/inactivo
-    subdireccion: Optional[SubdireccionPertenecienteSchema] = None  # Relación anidada
-    
+    subdireccion: Optional[SubdireccionPertenecienteSchema] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 # =========================================================
@@ -158,6 +151,8 @@ class ActividadBase(BaseModel):
     metadatos: Optional[Any] = None
     tiempo_aproximado: Optional[str] = None
     fecha_programada: Optional[date] = None
+    horario_programado: Optional[time] = None
+    lugar_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -186,6 +181,9 @@ class ActividadUpdate(BaseModel):
     metadatos: Optional["MetadatosActividad"] = None
     tiempo_aproximado: Optional[str] = None
     fecha_programada: Optional[date] = None
+    horario_programado: Optional[time] = None
+    lugar_id: Optional[int] = None
+    
 
     model_config = ConfigDict(from_attributes=True)
 
