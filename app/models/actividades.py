@@ -102,6 +102,7 @@ class Servicio_Encargado_Model(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(Text, nullable=False, unique=True)
     descripcion = Column(Text)
+    puesto_funcional = Column(String(150))
     # jefe_inmediato = Column(String(200))
     encargado_servicio = Column(String(200))
     activo = Column(Boolean, default=True, nullable=False)

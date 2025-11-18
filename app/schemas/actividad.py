@@ -90,6 +90,7 @@ class ServiciosEncargadoSchema(BaseModel):
     nombre: str                              # Nombre del servicio
     descripcion: Optional[str] = None        # Descripción opcional
     # jefe_inmediato: Optional[str] = None   # Jefe inmediato del servicio
+    puesto_funcional: Optional[str] = None
     encargado_servicio: Optional[str] = None # Encargado del servicio
     activo: bool
     subdireccion_id: Optional[int] = None
