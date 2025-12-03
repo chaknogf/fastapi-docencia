@@ -137,12 +137,14 @@ async def delete_user(
 @router.post("/user/registro", tags=["users"])
 async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db)):
     try:
-        # 🔐 Cifrar contraseña
+        # 🔐 Guardar la contraseña plana temporalmente para el correo
+        contraseña_plana = user.password
+
+        # 📌 Hashear contraseña con Argon2 antes de guardar en DB
         if user.password:
-            contraseña_plana = user.password
             user.password = pwd_context.hash(user.password)
 
-        # 📦 Crear usuario
+        # 📦 Crear el usuario en la base de datos
         new_user = UserModel(**user.model_dump())
         db.add(new_user)
         db.commit()
@@ -156,7 +158,7 @@ async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db))
             body=f"""
             <h2>¡Hola {new_user.nombre}!</h2>
             <p>Tu cuenta ha sido creada exitosamente en el sistema de docencia.</p>
-            <p>Ingresa a  https://hgtecpan.duckdns.org/cartelera/eventos</p>
+            <p>Ingresa a: <a href="https://hgtecpan.duckdns.org/cartelera/eventos">Cartelera de eventos</a></p>
             <p><b>Usuario:</b> {new_user.username}</p>
             <p><b>Correo:</b> {new_user.email}</p>
             <p><b>Contraseña:</b> {contraseña_plana}</p>
@@ -165,18 +167,27 @@ async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db))
             subtype=MessageType.html
         )
 
-        await fm.send_message(message)
+        try:
+            await fm.send_message(message)
+        except Exception as mail_error:
+            # 🔴 Log de error para depuración
+            print("Error enviando correo:", mail_error)
+            raise HTTPException(status_code=500, detail=f"Error enviando correo: {mail_error}")
 
-        return JSONResponse(status_code=201, content={
-            "message": "Usuario creado exitosamente y correo enviado",
-            "usuario": {
-                "nombre": new_user.nombre,
-                "email": new_user.email,
-                "username": new_user.username
+        return JSONResponse(
+            status_code=201,
+            content={
+                "message": "Usuario creado exitosamente y correo enviado",
+                "usuario": {
+                    "nombre": new_user.nombre,
+                    "email": new_user.email,
+                    "username": new_user.username
+                }
             }
-        })
+        )
 
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except SQLAlchemyError as db_error:
+        raise HTTPException(status_code=500, detail=f"Error en base de datos: {db_error}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al enviar correo: {e}")
+        raise HTTPException(status_code=500, detail=f"Error inesperado: {e}")
+
