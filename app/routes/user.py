@@ -139,6 +139,7 @@ async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db))
     try:
         # 🔐 Cifrar contraseña
         if user.password:
+            contraseña_plana = user.password
             user.password = pwd_context.hash(user.password)
 
         # 📦 Crear usuario
@@ -158,6 +159,7 @@ async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db))
             <p>Ingresa a  https://hgtecpan.duckdns.org/cartelera/eventos</p>
             <p><b>Usuario:</b> {new_user.username}</p>
             <p><b>Correo:</b> {new_user.email}</p>
+            <p><b>Contraseña:</b> {contraseña_plana}</p>
             <p>¡Bienvenido a bordo!</p>
             """,
             subtype=MessageType.html
