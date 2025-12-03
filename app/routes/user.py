@@ -27,6 +27,14 @@ from fastapi_mail import FastMail, MessageSchema, MessageType
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 router = APIRouter() 
 #pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto",
+    argon2__memory_cost=65536,
+    argon2__time_cost=3,
+    argon2__parallelism=4,
+)
+
 def get_db():
     db = SessionLocal()
     try:
