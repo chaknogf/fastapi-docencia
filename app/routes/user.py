@@ -8,6 +8,7 @@ from typing import List, Optional
 from datetime import date, datetime, time
 from app.database.db import SessionLocal
 from app.database.security import create_access_token
+from app.database.security import hash_password, verify_password
 from app.models.user import UserModel
 from sqlalchemy.orm import Session as SQLAlchemySession
 from passlib.context import CryptContext
@@ -25,7 +26,7 @@ from fastapi_mail import FastMail, MessageSchema, MessageType
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 router = APIRouter() 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+#pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def get_db():
     db = SessionLocal()
     try:
