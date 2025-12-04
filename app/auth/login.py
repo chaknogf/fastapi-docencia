@@ -50,6 +50,6 @@ def me(current_user: UserModel = Depends(get_current_user)):
         "email": current_user.email,
         "nombre": current_user.nombre,
         "role": current_user.role,
-        # "servicio_id": current_user.servicio_id,
+        "servicio_id": current_user.servicio_id,
         "estado": current_user.estado
     }

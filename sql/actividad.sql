@@ -38,7 +38,7 @@ VALUES (
         'Administrador',
         'admin',
         'chaknogf@gmail.com',
-        '$2b$12$dUC2UVF0m2qtXZbMafs8TuSw4cjWZJvQtA9r/OG8jNDdzEov85Ghm',
+        '$argon2id$v=19$m=65536,t=3,p=4$DIFwTun9P6cU4lzrfQ+hdA$Ts+DQClhTAGOUQOhCca+m2dBuBBvjfRRSzBh3hskQfY',
         'admin',
         'A',
         NOW(),
