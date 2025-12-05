@@ -51,5 +51,7 @@ def me(current_user: UserModel = Depends(get_current_user)):
         "nombre": current_user.nombre,
         "role": current_user.role,
         "servicio_id": current_user.servicio_id,
-        "estado": current_user.estado
+        "estado": current_user.estado,
+        "servicio": current_user.servicio
+        
     }

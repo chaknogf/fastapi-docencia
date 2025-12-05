@@ -1,6 +1,7 @@
 from sqlalchemy import CHAR, Column, Integer, String, TIMESTAMP, func, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database.db import Base
+from app.models.actividades import Servicio_Encargado_Model
 
 class UserModel(Base):
    __tablename__ = "users"
@@ -12,6 +13,6 @@ class UserModel(Base):
    password = Column(String(255), nullable=True)
    role = Column(String(50), nullable=False)
    estado = Column(CHAR(1), default='A')
-   servicio_id = Column(Integer, nullable=True)
+   servicio_id = Column(Integer, ForeignKey(Servicio_Encargado_Model.id), onupdate="CASCADE", nullable=True)
    # google_id = Column(String(100), unique=True, nullable=True)
-   # servicio = relationship("Servicio_Encargado_Model", back_populates="usuarios", lazy="joined")
+   servicio = relationship("Servicio_Encargado_Model", back_populates="usuarios")

@@ -114,6 +114,7 @@ class Servicio_Encargado_Model(Base):
 
     subdireccion = relationship("Subdireccion_Perteneciente_Model", back_populates="servicios")
     actividades = relationship("ActividadesModel", back_populates="servicio")
+    usuarios = relationship("UserModel", back_populates="servicio")
     
 # =========================================================
 #Modelo de lugar de realizacion

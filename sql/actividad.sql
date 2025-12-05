@@ -358,3 +358,13 @@ CREATE TABLE asistencia (
     capacitacion_id INT NOT NULL REFERENCES actividades (id) ON DELETE CASCADE,
     fecha_registro TIMESTAMP DEFAULT NOW()
 );
+
+-- ==========================================================
+-- ALTER TABLES - FOREIGN KEYS ADICIONALES
+ALTER TABLE users
+ADD CONSTRAINT fk_servicio
+FOREIGN KEY (servicio_id)
+REFERENCES servicio_encargado(id)
+ON UPDATE CASCADE
+ON DELETE SET NULL;
+-- =========================================================
