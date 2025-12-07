@@ -220,7 +220,6 @@ async def enviar_actividades_mensuales_todos(
 async def validar_no_coincidan_actividades(
     fecha: str,
     hora: Optional[time] = Query(None),
-    lugar: Optional[int] = Query(None),
     actividad_id: Optional[int] = Query(None),
     db: SQLAlchemySession = Depends(get_db)
 ):
@@ -231,78 +230,54 @@ async def validar_no_coincidan_actividades(
     - coincidencias: lista de conflictos (solo si valido = False)
     """
 
+    # Validación de fecha
     try:
-        # Convertir fecha de cadena a objeto date
-        try:
-            fecha_convertida = datetime.strptime(fecha, "%Y-%m-%d").date()
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Formato de fecha inválido. Usa YYYY-MM-DD."
-            )
-
-        # Consulta base
-        query = db.query(VistaActividad).filter(
-            VistaActividad.fecha_programada == fecha_convertida
+        fecha_convertida = datetime.strptime(fecha, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de fecha inválido. Usa YYYY-MM-DD."
         )
 
-        if hora is not None:
-            query = query.filter(VistaActividad.horario_programado == hora)
+    # Base del query
+    query = db.query(VistaActividad).filter(
+        VistaActividad.fecha_programada == fecha_convertida
+    )
 
-        if lugar is not None:
-            query = query.filter(VistaActividad.lugar_id == lugar)
+    # Filtro por hora si aplica
+    if hora is not None:
+        query = query.filter(VistaActividad.horario_programado == hora)
 
-        coincidencias = query.all()
+    # Exclusión del lugar 3 (no verificable)
+    query = query.filter(VistaActividad.lugar_id != 3)
 
-        # Caso 1: Sin coincidencias
-        if not coincidencias:
-            return {
-                "valido": True,
-                "mensaje": "Sin conflictos. Puede registrar la actividad.",
-                "coincidencias": []
-            }
+    # Exclusión del propio registro si se está editando
+    if actividad_id is not None:
+        query = query.filter(VistaActividad.id != actividad_id)
 
-        # Si edita: excluir su propia actividad
-        coincidencias_filtradas = [
-            c for c in coincidencias if c.id != actividad_id
-        ] if actividad_id else coincidencias
+    coincidencias = query.all()
 
-        # Caso 2: Solo coincidía consigo mismo
-        if actividad_id and len(coincidencias_filtradas) == 0:
-            return {
-                "valido": True,
-                "mensaje": "Sin conflictos. La coincidencia encontrada corresponde a la misma actividad.",
-                "coincidencias": []
-            }
-
-        # Caso 3: Hay conflictos reales
-        if len(coincidencias_filtradas) > 0:
-            # Solo enviamos datos esenciales
-            coincidencias_resumidas = [
-                {
-                    "id": c.id,
-                    "servicio": c.servicio_encargado,
-                    "tema": c.tema
-                }
-                for c in coincidencias_filtradas
-            ]
-
-            return {
-                "valido": False,
-                "mensaje": f"Se encontraron {len(coincidencias_filtradas)} actividades que generan conflicto.",
-                "coincidencias": coincidencias_resumidas
-            }
-
-        # Fallback seguro
+    # Caso A: No hay conflictos
+    if not coincidencias:
         return {
             "valido": True,
-            "mensaje": "Sin conflictos.",
+            "mensaje": "Sin conflictos. Puede registrar la actividad.",
             "coincidencias": []
         }
 
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error en base de datos: {str(e)}")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
-    
+    # Caso B: Sí hay conflictos
+    # Podrías afinar el mensaje si quieres más elegancia contextual.
+    return {
+        "valido": False,
+        "mensaje": "Existen actividades que coinciden en fecha u horario. Porfavor programa otra fecha u hora.",
+        "coincidencias": [  
+            {
+                "id": c.id,
+                "tema": c.tema,
+                "hora": str(c.horario_programado),
+                "lugar": c.lugar,
+                "servicio": c.servicio_encargado
+            }
+            for c in coincidencias
+        ]
+    }
