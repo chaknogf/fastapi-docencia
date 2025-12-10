@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
 
@@ -33,3 +33,7 @@ class UserResponse(UserBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+    
+class PasswordUpdate(BaseModel):
+    new_password: str = Field(min_length=6)
+    confirm_password: str = Field(min_length=6)
