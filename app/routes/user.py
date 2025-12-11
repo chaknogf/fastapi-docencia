@@ -158,7 +158,7 @@ async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db))
             body=f"""
             <h2>¡Hola {new_user.nombre}!</h2>
             <p>Tu cuenta ha sido creada exitosamente en el sistema de docencia.</p>
-            <p>Ingresa a: <a href="https://hgtecpan.duckdns.org/cartelera/eventos">Cartelera de eventos</a></p>
+            <p>Ingresa a: <a href="https://www.hosptecpan.space/cartelera/eventos">Cartelera de eventos</a></p>
             <p><b>Usuario:</b> {new_user.username}</p>
             <p><b>Correo:</b> {new_user.email}</p>
             <p><b>Contraseña:</b> {contraseña_plana}</p>
