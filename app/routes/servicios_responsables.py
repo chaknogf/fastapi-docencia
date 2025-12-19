@@ -121,7 +121,7 @@ async def crear_servicio_responsable(
             }
         )
 # =========================
-# ENDPOINT: ACTUALIZAR ACTIVIDAD
+# ENDPOINT: ACTUALIZAR SERVICIO
 # =========================
 @router.put("/servicio_responsable/actualizar/{servicio_id}", tags=["servicios_responsables"])
 async def actualizar_servicio(

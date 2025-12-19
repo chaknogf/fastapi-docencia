@@ -97,6 +97,7 @@ def get_current_admin_user(current_user: UserModel = Depends(get_current_user)) 
 # Exporta todo lo útil
 __all__ = [
     "hash_password",
+    
     "verify_password",
     "create_access_token",
     "oauth2_scheme",
@@ -104,3 +105,23 @@ __all__ = [
     "get_current_admin_user",
     "pwd_context"
 ]
+
+def get_current_user(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        sub = payload.get("sub")
+
+        if not sub:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return {
+            "sub": sub,
+            "is_admin": sub == "admin"
+        }
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(
+                status_code=404,
+                detail={"status": "error", "message": "Usuario no encontrado"}
+            )   
