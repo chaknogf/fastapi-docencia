@@ -75,10 +75,10 @@ async def listar_actividades(
     Los filtros permiten búsquedas exactas o parciales.
     """
     try:
-        # Query base de la vista completa de actividades
-        query = db.query(VistaActividad).order_by(desc(VistaActividad.id))
+       # Query base
+        query = db.query(VistaActividad)
 
-        # Aplicar filtros condicionales si se pasan parámetros
+        # Filtros
         if id:
             query = query.filter(VistaActividad.id == id)
         if tema:
@@ -88,8 +88,9 @@ async def listar_actividades(
         if servicio_encargado:
             query = query.filter(VistaActividad.servicio_id == servicio_encargado)
         if persona:
-            # Filtro JSON: nombre del responsable dentro de persona_responsable
-            query = query.filter(VistaActividad.persona_responsable['r0']['nombre'].astext.ilike(f"%{persona}%"))
+            query = query.filter(
+                VistaActividad.persona_responsable['r0']['nombre'].astext.ilike(f"%{persona}%")
+            )
         if fecha:
             query = query.filter(VistaActividad.fecha_programada == fecha)
         if modalidad:
@@ -97,12 +98,20 @@ async def listar_actividades(
         if estado:
             query = query.filter(VistaActividad.estado == estado)
         if entrega:
-            query = query.filter(VistaActividad.detalles['fecha_entrega_informe'].astext == entrega)
+            query = query.filter(
+                VistaActividad.detalles['fecha_entrega_informe'].astext == entrega
+            )
         if mes:
             query = query.filter(VistaActividad.mes_id == mes)
 
-        # Aplicar paginación
-        return query.offset(skip).limit(limit).all()
+        # Orden inteligente: por fecha cuando hay filtro de mes, sino por ID descendente
+        if mes is not None:
+            query = query.order_by(asc(VistaActividad.fecha_programada))
+        else:
+            query = query.order_by(desc(VistaActividad.id))
+
+        # Paginación
+        return query.offset(skip).limit(limit).all()        
 
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
