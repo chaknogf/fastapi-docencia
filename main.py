@@ -8,6 +8,7 @@ from app.routes.actividad import router as actividad
 from app.routes.servicios_responsables import router as servicios
 from app.routes.funciones import router as funciones
 from app.routes.asistencia import router as asistencia
+from app.routes.reporte import router as reporte
 from app.auth.login import router as login
 
 
@@ -35,6 +36,7 @@ app.include_router(servicios)
 app.include_router(otros_valores)
 app.include_router(funciones)
 app.include_router(asistencia)
+app.include_router(reporte)
 
 
 
