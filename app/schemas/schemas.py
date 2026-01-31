@@ -26,6 +26,15 @@ class UserBase(BaseModel):
     servicio_id: Optional[int] = None
     # google_id: Optional[str] = None
 
+class UserUpdate(BaseModel):
+    nombre: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[str] = None
+    estado: Optional[str] = None
+    servicio_id: Optional[int] = None
+
+
 class UserCreate(UserBase):
     pass  # No incluir 'id'
 

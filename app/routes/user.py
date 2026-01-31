@@ -13,10 +13,11 @@ from app.models.user import UserModel
 from sqlalchemy.orm import Session as SQLAlchemySession
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
-from app.schemas.schemas import TokenResponse, UserCreate, UserBase, UserResponse
+from app.schemas.schemas import TokenResponse, UserCreate, UserBase, UserResponse, UserUpdate
 from app.config.mail_config import conf
 import asyncio
 from fastapi_mail import FastMail, MessageSchema, MessageType
+from app.database.security import get_current_user
 
 
 
@@ -96,23 +97,52 @@ async def create_user(
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.put("/user/actualizar/{user_id}", tags=["users"])
+@router.put(
+    "/user/actualizar/{user_id}",
+    tags=["users"],
+    response_model=UserResponse
+)
 async def update_user(
-    user_id: int, 
-    user: UserBase, 
+    user_id: int,
+    user: UserUpdate,
     token: str = Depends(oauth2_scheme),
-    db: SQLAlchemySession = Depends(get_db)):
+    db: SQLAlchemySession = Depends(get_db)
+):
+    current_user = get_current_user(token)
+
+    if not current_user["is_admin"] and current_user["sub"] != str(user_id):
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     try:
         db_user = db.query(UserModel).filter(UserModel.id == user_id).first()
-        if db_user is None:
+
+        if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
-        for key, value in user.model_dump().items():
-            setattr(db_user, key, value)
+
+        data = user.model_dump(exclude_unset=True)
+
+        campos_permitidos = {
+            "nombre",
+            "username",
+            "email",
+            "estado",
+            "servicio_id",
+            "role"
+        }
+
+        for key, value in data.items():
+            if key in campos_permitidos:
+                setattr(db_user, key, value)
+
         db.commit()
         db.refresh(db_user)
-        return JSONResponse(status_code=200, content=jsonable_encoder(db_user))
+
+        return db_user
+
     except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error"+str(e))
+
     
     
 @router.delete("/user/eliminar/{user_id}", tags=["users"])
@@ -190,4 +220,5 @@ async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db))
         raise HTTPException(status_code=500, detail=f"Error en base de datos: {db_error}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error inesperado: {e}")
+
 
