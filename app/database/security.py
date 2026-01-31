@@ -106,22 +106,30 @@ __all__ = [
     "pwd_context"
 ]
 
-def get_current_user(token: str):
+def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db)
+) -> UserModel:
+    """
+    Dependencia que decodifica el JWT y devuelve el usuario autenticado.
+    Úsala en cualquier endpoint protegido.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token inválido o expirado",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        sub = payload.get("sub")
-
-        if not sub:
-            raise HTTPException(status_code=401, detail="Invalid token")
-
-        return {
-            "sub": sub,
-            "is_admin": sub == "admin"
-        }
-
+        username: str | None = payload.get("sub")
+        if username is None:
+            raise credentials_exception
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-        raise HTTPException(
-                status_code=404,
-                detail={"status": "error", "message": "Usuario no encontrado"}
-            )   
+        raise credentials_exception
+
+    user = db.query(UserModel).filter(UserModel.username == username).first()
+    if user is None:
+        raise credentials_exception
+
+    return user
