@@ -137,7 +137,7 @@ async def generar_reporte_excel(
                 act.id,
                 act.tema,
                 act.actividad,
-                act.servicio_id,
+                act.servicio_encargado,
                 responsable,
                 act.fecha_programada.strftime('%Y-%m-%d') if act.fecha_programada else '',
                 act.modalidad,
