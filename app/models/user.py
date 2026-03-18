@@ -13,10 +13,14 @@ class UserModel(Base):
    password = Column(String(255), nullable=True)
    role = Column(String(50), nullable=False)
    estado = Column(CHAR(1), default='A')
-   servicio_id = Column(Integer, ForeignKey(Servicio_Encargado_Model.id), onupdate="CASCADE", nullable=True)
+   servicio_id = Column(
+    Integer,
+    ForeignKey(Servicio_Encargado_Model.id, onupdate="CASCADE"), 
+    nullable=True
+)
    # google_id = Column(String(100), unique=True, nullable=True)
    servicio = relationship("Servicio_Encargado_Model", back_populates="usuarios")
    
-   @property
-   def is_admin(self) -> bool:
-      return self.role == "admin"
+   #@property
+   #def is_admin(self) -> bool:
+   #   return self.role == "admin"
