@@ -22,11 +22,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:4200",
-        "https://www.hosptecpan.space"
-    ],
-    allow_credentials=True,  # ✅ ahora sí es válido
+    allow_origins=["*"],
+    allow_credentials=True,  
     allow_methods=["*"],
     allow_headers=["*"],
 )
