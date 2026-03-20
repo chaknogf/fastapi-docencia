@@ -22,8 +22,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,  
+    allow_origin_regex=r"http://localhost(:\d+)?",  # cualquier puerto local
+    allow_origins=["https://www.hosptecpan.space"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
