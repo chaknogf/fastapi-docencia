@@ -32,7 +32,10 @@ engine = create_engine(
     echo=False,  # echo=True solo en desarrollo
     pool_pre_ping=True,
     pool_recycle=300,
-    connect_args={"connect_timeout": 10}
+    connect_args={
+        "connect_timeout": 10,
+        "options": "-c client_encoding=UTF8"
+    }
 )
 
 # Test de conexión al iniciar
@@ -50,7 +53,7 @@ Base = declarative_base()
 # ======================
 # DEPENDENCIA FASTAPI
 # ======================
-def get_db() -> Session:
+def get_db() -> Session: # type: ignore
     """
     Dependencia de FastAPI para inyectar sesión de BD.
     Uso: db: Session = Depends(get_db)

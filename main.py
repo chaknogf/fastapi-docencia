@@ -10,7 +10,8 @@ from app.routes.funciones import router as funciones
 from app.routes.asistencia import router as asistencia
 from app.routes.reporte import router as reporte
 from app.auth.login import router as login
-
+from app.database.db import engine
+from sqlalchemy import text
 
 
 app = FastAPI(
@@ -23,10 +24,24 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+@app.get("/health")
+def health():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {
+            "status": "ok",
+            "database": "connected"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "database": str(e)
+        }
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://localhost(:\d+)?",  # cualquier puerto local
-    allow_origins=["https://www.hosptecpan.space"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
