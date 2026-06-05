@@ -66,7 +66,7 @@ async def listar_asistencias(
     fecha: Optional[str] = Query(None),
     db: SQLAlchemySession = Depends(get_db),
     skip: int = Query(0, ge=0, description="Número de registros a omitir"),
-    limit: int = Query(50, le=500, description="Número máximo de registros a devolver"),
+    limit: int = 500,
     orden: Optional[str] = Query("asc", description="Orden ascendente o descendente por fecha")
 ):
     """
