@@ -17,7 +17,10 @@ app = FastAPI(
     title="FASTAPI DOCENCIA",
     version="3.0.0",
     description="Documentación de la API FastAPI Docencia",
-    root_path="/fad"
+    root_path="/fad",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 app.add_middleware(
