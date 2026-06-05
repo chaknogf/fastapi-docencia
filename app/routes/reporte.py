@@ -13,15 +13,14 @@ from pathlib import Path
 import time
 
 from app.database.db import SessionLocal
+from app.database.security import oauth2_scheme
 from app.models.actividades import VistaActividad
 from app.schemas.actividad import ActividadVista
-from fastapi.security import OAuth2PasswordBearer
 
 # =========================
 # ROUTER Y SEGURIDAD
 # =========================
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 # =========================

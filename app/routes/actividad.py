@@ -2,13 +2,13 @@ from datetime import datetime
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import asc, desc, func, extract, Integer, cast
 
 
 from app.database.db import SessionLocal
+from app.database.security import oauth2_scheme, get_current_user
 from app.models.actividades import (
     ActividadesModel,
     ResumenAnualModel,
@@ -25,14 +25,13 @@ from app.schemas.actividad import (
     ReporteActividad,
     ResumenAnualSchema,
     VistaEjecucionSchema,
-   
+    
 )
 
 # =========================
 # ROUTER Y SEGURIDAD
 # =========================
 router = APIRouter()  # Instancia de APIRouter de FastAPI
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # Seguridad OAuth2
 
 
 # =========================
@@ -58,15 +57,18 @@ async def listar_actividades(
     id: Optional[int] = Query(None),
     tema: Optional[str] = Query(None),
     actividad: Optional[str] = Query(None),
-    servicio_encargado: Optional[str] = Query(None),
+    servicio_encargado: Optional[int] = Query(None, description="ID del servicio"),
+    subdireccion_id: Optional[int] = Query(None, description="ID de la subdirección"),
     persona: Optional[str] = Query(None),
-    fecha: Optional[str] = Query(None),
+    fecha_desde: Optional[str] = Query(None, description="Fecha inicial (YYYY-MM-DD)"),
+    fecha_hasta: Optional[str] = Query(None, description="Fecha final (YYYY-MM-DD)"),
+    fecha_programada: Optional[str] = Query(None, description="Fecha exacta (YYYY-MM-DD)"),
     modalidad: Optional[str] = Query(None),
     estado: Optional[str] = Query(None),
     entrega: Optional[str] = Query(None),
     mes: Optional[int] = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1),
+    anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
+    lugar_id: Optional[int] = Query(None, description="ID del lugar de realización"),
     # token: str = Depends(oauth2_scheme),  # Requiere token
     db: SQLAlchemySession = Depends(get_db)
 ):
@@ -87,12 +89,18 @@ async def listar_actividades(
             query = query.filter(VistaActividad.actividad.ilike(f"%{actividad}%"))
         if servicio_encargado:
             query = query.filter(VistaActividad.servicio_id == servicio_encargado)
+        if subdireccion_id:
+            query = query.filter(VistaActividad.subdireccion_id == subdireccion_id)
         if persona:
             query = query.filter(
                 VistaActividad.persona_responsable['r0']['nombre'].astext.ilike(f"%{persona}%")
             )
-        if fecha:
-            query = query.filter(VistaActividad.fecha_programada == fecha)
+        if fecha_desde:
+            query = query.filter(VistaActividad.fecha_programada >= fecha_desde)
+        if fecha_hasta:
+            query = query.filter(VistaActividad.fecha_programada <= fecha_hasta)
+        if fecha_programada:
+            query = query.filter(VistaActividad.fecha_programada == fecha_programada)
         if modalidad:
             query = query.filter(VistaActividad.modalidad == modalidad)
         if estado:
@@ -103,6 +111,10 @@ async def listar_actividades(
             )
         if mes:
             query = query.filter(VistaActividad.mes_id == mes)
+        if anio:
+            query = query.filter(VistaActividad.anio == anio)
+        if lugar_id:
+            query = query.filter(VistaActividad.lugar_id == lugar_id)
 
         # Orden inteligente: por fecha cuando hay filtro de mes, sino por ID descendente
         if mes is not None:
@@ -110,8 +122,7 @@ async def listar_actividades(
         else:
             query = query.order_by(desc(VistaActividad.id))
 
-        # Paginación
-        return query.offset(skip).limit(limit).all()        
+        return query.all()
 
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -157,7 +168,7 @@ async def crear_actividad(
 async def actualizar_actividad(
     actividad_id: int,
     actividad: ActividadUpdate,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
@@ -187,7 +198,7 @@ async def actualizar_actividad(
 @router.delete("/actividad/eliminar/{actividad_id}", tags=["actividades"])
 async def eliminar_actividad(
     actividad_id: int,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """

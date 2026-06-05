@@ -2,12 +2,12 @@ from datetime import datetime
 from typing import Optional, List, Dict, Type
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import desc, func, extract, Integer, cast
 
 from app.database.db import SessionLocal
+from app.database.security import oauth2_scheme, get_current_user
 from app.models.actividades import (
    Modalidad,
    Actividad,
@@ -41,7 +41,6 @@ from app.schemas.otras import (
 # ROUTER Y SEGURIDAD
 # =========================
 router = APIRouter()  # Instancia de APIRouter de FastAPI
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # Seguridad OAuth2
 
 
 # =========================
@@ -93,7 +92,7 @@ async def listar_actividad(
 @router.post("/tipos_actividad/crear/", status_code=201, tags=["tipo de actividad"])
 async def crear_tipo_actividad(
     schemadata: TipoActividadCreate,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Actividad] = Depends(get_model_Actividad)
 ):
@@ -117,7 +116,7 @@ async def crear_tipo_actividad(
 async def actualizar_actividad(
     data_id: int,
     schemadata: TipoActividadSchema,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Actividad] = Depends(get_model_Actividad)
 ):
@@ -171,7 +170,7 @@ async def listar_modalidades(
 @router.post("/modalidad/crear/", status_code=201, tags=["modalidades"])
 async def crear_tipo_actividad(
     schemadata: ModalidadCreate,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Modalidad] = Depends(get_model_Modalidad)
 ):
@@ -195,7 +194,7 @@ async def crear_tipo_actividad(
 async def actualizar_modalidad(
     data_id: int,
     schemadata: ModalidadSchema,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Modalidad] = Depends(get_model_Modalidad)
 ):
@@ -249,7 +248,7 @@ async def listar_estados(
 @router.post("/estado/crear/", status_code=201, tags=["estados"])
 async def crear_estados(
     schemadata: EstadoCreate,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Estado] = Depends(get_model_Estado)
 ):
@@ -273,7 +272,7 @@ async def crear_estados(
 async def actualizar_estado(
     data_id: int,
     schemadata: EstadoSchema,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db),
     model: Type[Estado] = Depends(get_model_Estado)
 ):

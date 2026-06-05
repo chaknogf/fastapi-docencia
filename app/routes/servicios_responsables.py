@@ -3,12 +3,12 @@ from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import desc, func, extract, Integer, cast
 
 from app.database.db import SessionLocal
+from app.database.security import oauth2_scheme, get_current_user
 from app.models.actividades import (
    Subdireccion_Perteneciente_Model,
    Servicio_Encargado_Model,
@@ -24,7 +24,6 @@ from app.schemas.actividad import (
 # ROUTER Y SEGURIDAD
 # =========================
 router = APIRouter()  # Instancia de APIRouter de FastAPI
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # Seguridad OAuth2
 
 
 # =========================
@@ -87,7 +86,7 @@ async def listar_servicios(
 @router.post("/servicios_responsables/crear/", status_code=201, tags=["servicios_responsables"])
 async def crear_servicio_responsable(
     servicio: ServiciosEncargadoSchema,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     try:
@@ -127,7 +126,7 @@ async def crear_servicio_responsable(
 async def actualizar_servicio(
     servicio_id: int,
     servicio: ServiciosEncargadoUpdate,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
@@ -185,7 +184,7 @@ async def actualizar_servicio(
 @router.patch("/actividad/desactivar/{servicio_id}", tags=["servicios_responsables"])
 async def desactivar_servicio(
     servicio_id: int,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """

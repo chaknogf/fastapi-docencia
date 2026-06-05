@@ -39,7 +39,7 @@ pwd_context = CryptContext(
 # ======================================================
 # OAUTH2
 # ======================================================
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/fad/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # ======================================================
 # HASH DE CONTRASEÑAS

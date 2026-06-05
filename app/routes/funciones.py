@@ -3,7 +3,6 @@ from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from datetime import time
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import asc, desc, func, extract, Integer, cast
@@ -13,6 +12,7 @@ from fastapi_mail import FastMail, MessageSchema, MessageType
 
 
 from app.database.db import SessionLocal
+from app.database.security import oauth2_scheme
 from app.models.actividades import (
     VistaActividad
 )
@@ -30,7 +30,6 @@ from app.schemas.schemas import (
 # ROUTER Y SEGURIDAD
 # =========================
 router = APIRouter()  # Instancia de APIRouter de FastAPI
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # Seguridad OAuth2
 
 
 # =========================

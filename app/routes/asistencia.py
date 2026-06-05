@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import asc, desc, func, extract, Integer, cast
@@ -11,12 +10,12 @@ from fastapi_mail import FastMail, MessageSchema, MessageType
 from app.database.db import SessionLocal
 from app.models.asistencia import Asistencia
 from app.schemas.asistencia import AsistenciaCreate, AsistenciaBase, AsistenciaRead
+from app.database.security import oauth2_scheme
 
 # =========================
 # ROUTER Y SEGURIDAD
 # =========================
 router = APIRouter(prefix="/asistencia", tags=["Asistencia"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # =========================
 # DEPENDENCIA DE DB
@@ -64,14 +63,14 @@ async def registrar_asistencia(
 async def listar_asistencias(
     capacitacion: Optional[int] = Query(None),
     fecha: Optional[str] = Query(None),
+    fecha_desde: Optional[str] = Query(None, description="Fecha inicial (YYYY-MM-DD)"),
+    fecha_hasta: Optional[str] = Query(None, description="Fecha final (YYYY-MM-DD)"),
     db: SQLAlchemySession = Depends(get_db),
-    skip: int = Query(0, ge=0, description="Número de registros a omitir"),
-    limit: int = Query(500, ge=1, le=10000, description="Número máximo de registros a retornar"),
     orden: Optional[str] = Query("asc", description="Orden ascendente o descendente por fecha")
 ):
     """
-    Devuelve la lista de asistencias registradas.
-    Permite filtrado, paginación y ordenamiento.
+    Devuelve la lista de asistencias registradas sin límite.
+    Permite filtrado y ordenamiento.
     """
     try:
         query = db.query(Asistencia)
@@ -80,10 +79,13 @@ async def listar_asistencias(
             query = query.filter(Asistencia.capacitacion_id == capacitacion)
         if fecha:
             query = query.filter(func.date(Asistencia.fecha_registro) == fecha)
+        if fecha_desde:
+            query = query.filter(func.date(Asistencia.fecha_registro) >= fecha_desde)
+        if fecha_hasta:
+            query = query.filter(func.date(Asistencia.fecha_registro) <= fecha_hasta)
 
         query = query.order_by(desc(Asistencia.fecha_registro) if orden == "desc" else asc(Asistencia.fecha_registro))
-        resultados = query.offset(skip).limit(limit).all()
-        return resultados
+        return query.all()
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error en base de datos: {str(e)}")
 

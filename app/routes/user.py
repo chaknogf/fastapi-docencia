@@ -7,25 +7,17 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import date, datetime, time
 from app.database.db import SessionLocal
-from app.database.security import create_access_token
-from app.database.security import hash_password, verify_password, pwd_context
+from app.database.security import create_access_token, hash_password, verify_password, pwd_context, get_current_user, oauth2_scheme
 from app.models.user import UserModel
 from sqlalchemy.orm import Session as SQLAlchemySession
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
 from app.schemas.schemas import TokenResponse, UserCreate, UserBase, UserResponse, UserUpdate
 from app.config.mail_config import conf
 import asyncio
 from fastapi_mail import FastMail, MessageSchema, MessageType
-from app.database.security import get_current_user
 
 
 
-
-
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 router = APIRouter() 
 #pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -45,7 +37,7 @@ async def get_users(
     username: Optional[str] = Query(None, description="Username del usuario"),
     email: Optional[str] = Query(None, description="Email del usuario"),
     role: Optional[str] = Query(None, description="Role del usuario"),
-    current_user: dict = Depends(oauth2_scheme),  # Esto ya valida el token
+    current_user: str = Depends(get_current_user),  # Esto ya valida el token
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=0),
     db: SQLAlchemySession = Depends(get_db)
@@ -75,7 +67,7 @@ async def get_users(
 @router.post("/user/crear", tags=["users"])
 async def create_user(
     user: UserCreate, 
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)):
     try:
         # Asegúrate de que la contraseña esté cifrada
@@ -105,10 +97,9 @@ async def create_user(
 async def update_user(
     user_id: int,
     user: UserUpdate,
-    token: str = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
-    # current_user = get_current_user(token)
     # if not current_user["is_admin"] and current_user["sub"] != str(user_id):
     #     raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -139,7 +130,7 @@ async def update_user(
 @router.delete("/user/eliminar/{user_id}", tags=["users"])
 async def delete_user(
     user_id: int, 
-    current_user: dict = Depends(oauth2_scheme),
+    current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)):
     try:
         db_user = db.query(UserModel).filter(UserModel.id == user_id).first()
