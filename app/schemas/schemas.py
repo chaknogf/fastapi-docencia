@@ -46,3 +46,13 @@ class UserResponse(UserBase):
 class PasswordUpdate(BaseModel):
     new_password: str = Field(min_length=6)
     confirm_password: str = Field(min_length=6)
+
+
+class RecuperarContrasenaRequest(BaseModel):
+    email: EmailStr
+
+
+class RestablecerContrasenaRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=6)
+    confirm_password: str = Field(min_length=6)

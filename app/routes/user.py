@@ -1,3 +1,5 @@
+from datetime import date, datetime, time, timedelta
+from jose import JWTError, jwt
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
@@ -5,13 +7,13 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy import func, desc
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-from datetime import date, datetime, time
 from app.database.db import SessionLocal
+from app.database.config import SECRET_KEY, ALGORITHM
 from app.database.security import create_access_token, hash_password, verify_password, pwd_context, get_current_user, oauth2_scheme
 from app.models.user import UserModel
 from sqlalchemy.orm import Session as SQLAlchemySession
 from passlib.context import CryptContext
-from app.schemas.schemas import TokenResponse, UserCreate, UserBase, UserResponse, UserUpdate
+from app.schemas.schemas import TokenResponse, UserCreate, UserBase, UserResponse, UserUpdate, RecuperarContrasenaRequest, RestablecerContrasenaRequest
 from app.config.mail_config import conf
 import asyncio
 from fastapi_mail import FastMail, MessageSchema, MessageType
@@ -200,6 +202,104 @@ async def create_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db))
 
     except SQLAlchemyError as db_error:
         raise HTTPException(status_code=500, detail=f"Error en base de datos: {db_error}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error inesperado: {e}")
+
+
+# ==============================
+# RECUPERAR CONTRASEÑA (SOLICITUD)
+# ==============================
+@router.post("/user/recuperar-contrasena", tags=["users"])
+async def recuperar_contrasena(
+    data: RecuperarContrasenaRequest,
+    db: SQLAlchemySession = Depends(get_db),
+):
+    try:
+        usuario = db.query(UserModel).filter(UserModel.email == data.email).first()
+        if not usuario:
+            return {"message": "Si el correo existe, recibirás instrucciones para restablecer tu contraseña"}
+
+        reset_token = create_access_token(
+            data={"sub": usuario.username, "purpose": "password_reset"},
+            expires_delta=timedelta(minutes=30),
+        )
+
+        reset_link = f"https://www.hosptecpan.space/cartelera/restablecer?token={reset_token}"
+
+        fm = FastMail(conf)
+        message = MessageSchema(
+            subject="Recuperación de contraseña - Docencia Tecpán",
+            recipients=[usuario.email],
+            body=f"""
+            <div style="font-family: Arial, sans-serif; color: #333;">
+                <h2 style="color: #2c3e50;">Recuperación de contraseña</h2>
+                <p>Hola <strong>{usuario.nombre}</strong>,</p>
+                <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
+                <p style="text-align: center;">
+                    <a href="{reset_link}"
+                       style="background-color: #2980b9; color: white; padding: 12px 24px;
+                              text-decoration: none; border-radius: 5px; display: inline-block;">
+                        Restablecer contraseña
+                    </a>
+                </p>
+                <p>Este enlace expira en 30 minutos.</p>
+                <p>Si no solicitaste este cambio, ignora este mensaje.</p>
+                <p>Atentamente,<br><strong>Coordinación de Docencia</strong></p>
+            </div>
+            """,
+            subtype=MessageType.html,
+        )
+
+        try:
+            await fm.send_message(message)
+        except Exception as mail_error:
+            print("Error enviando correo de recuperación:", mail_error)
+            raise HTTPException(status_code=500, detail="Error al enviar el correo de recuperación")
+
+        return {"message": "Si el correo existe, recibirás instrucciones para restablecer tu contraseña"}
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Error en base de datos: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error inesperado: {e}")
+
+
+# ==============================
+# RESTABLECER CONTRASEÑA
+# ==============================
+@router.post("/user/restablecer-contrasena", tags=["users"])
+async def restablecer_contrasena(
+    data: RestablecerContrasenaRequest,
+    db: SQLAlchemySession = Depends(get_db),
+):
+    if data.new_password != data.confirm_password:
+        raise HTTPException(status_code=400, detail="Las contraseñas no coinciden")
+
+    try:
+        payload = jwt.decode(data.token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("purpose") != "password_reset":
+            raise HTTPException(status_code=400, detail="Token inválido")
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=400, detail="Token inválido")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Token inválido o expirado")
+
+    try:
+        usuario = db.query(UserModel).filter(UserModel.username == username).first()
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        usuario.password = pwd_context.hash(data.new_password)
+        db.commit()
+
+        return {"message": "Contraseña restablecida exitosamente"}
+
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en base de datos: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error inesperado: {e}")
 

@@ -11,13 +11,16 @@ class LugaresSchema(BaseModel):
     id: int
     nombre: str
     descripcion: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
+class LugaresCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class LugaresUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
-
     model_config = ConfigDict(from_attributes=True)
     
 # =========================================================

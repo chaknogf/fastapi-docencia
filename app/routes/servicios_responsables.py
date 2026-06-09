@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import desc, func, extract, Integer, cast
 
-from app.database.db import SessionLocal
+from app.apicore import get_db
 from app.database.security import oauth2_scheme, get_current_user
 from app.models.actividades import (
    Subdireccion_Perteneciente_Model,
@@ -16,35 +16,12 @@ from app.models.actividades import (
 from app.schemas.actividad import (
     ServiciosEncargadoSchema,
     ServiciosEncargadoUpdate,
-    SubdireccionPertenecienteUpdate,
-    SubdireccionPertenecienteSchema
 )
 
-# =========================
-# ROUTER Y SEGURIDAD
-# =========================
-router = APIRouter()  # Instancia de APIRouter de FastAPI
+router = APIRouter(tags=["servicios_responsables"])
 
 
-# =========================
-# DEPENDENCIA DE DB
-# =========================
-def get_db():
-    """
-    Genera y cierra la sesión de la base de datos por petición.
-    Esto se usa en los endpoints con `Depends(get_db)`.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# =========================
-# ENDPOINT: LISTAR SERVICIOS
-# =========================
-@router.get("/servicios_responsables/", response_model=List[ServiciosEncargadoUpdate], tags=["servicios_responsables"])
+@router.get("/servicios_responsables/", response_model=List[ServiciosEncargadoUpdate])
 async def listar_servicios(
     id: Optional[int] = Query(None),
     nombre: Optional[str] = Query(None),
@@ -52,53 +29,35 @@ async def listar_servicios(
     activo: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1),
-    # token: str = Depends(oauth2_scheme),  # Requiere token
     db: SQLAlchemySession = Depends(get_db)
 ):
-    """
-    Lista actividades filtrando por múltiples parámetros opcionales.
-    Los filtros permiten búsquedas exactas o parciales.
-    """
     try:
-        # Query base de la vista completa de actividades
         query = db.query(Servicio_Encargado_Model).order_by(desc(Servicio_Encargado_Model.id))
-
-        # Aplicar filtros condicionales si se pasan parámetros
         if id:
             query = query.filter(Servicio_Encargado_Model.id == id)
         if nombre:
             query = query.filter(Servicio_Encargado_Model.nombre.ilike(f"%{nombre}%"))
         if sub:
             query = query.filter(Servicio_Encargado_Model.subdireccion_id == sub)
-        if activo:
+        if activo is not None:
             query = query.filter(Servicio_Encargado_Model.activo == activo)
-        
-        # Aplicar paginación
         return query.offset(skip).limit(limit).all()
-
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# =========================
-# ENDPOINT: CREAR SERVICIOS
-# =========================
-@router.post("/servicios_responsables/crear/", status_code=201, tags=["servicios_responsables"])
+@router.post("/servicios_responsables/crear/", status_code=201)
 async def crear_servicio_responsable(
     servicio: ServiciosEncargadoSchema,
     current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     try:
-      
-
         nuevo_servicio = Servicio_Encargado_Model(**servicio.model_dump())
         db.add(nuevo_servicio)
         db.commit()
         db.refresh(nuevo_servicio)
-
         return JSONResponse(status_code=200, content={"message": "created successfully"})
-
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -108,7 +67,6 @@ async def crear_servicio_responsable(
                 "message": "Conflicto: este servicio ya existe o viola una restricción única."
             }
         )
-
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(
@@ -119,54 +77,38 @@ async def crear_servicio_responsable(
                 "details": str(e)
             }
         )
-# =========================
-# ENDPOINT: ACTUALIZAR SERVICIO
-# =========================
-@router.put("/servicio_responsable/actualizar/{servicio_id}", tags=["servicios_responsables"])
+
+
+@router.put("/servicio_responsable/actualizar/{servicio_id}")
 async def actualizar_servicio(
     servicio_id: int,
     servicio: ServiciosEncargadoUpdate,
     current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
-    """
-    Actualiza un servicio existente. Solo actualiza los campos enviados.
-    """
     try:
         db_servicio = (
             db.query(Servicio_Encargado_Model)
             .filter(Servicio_Encargado_Model.id == servicio_id)
             .first()
         )
-
         if not db_servicio:
             raise HTTPException(
                 status_code=404,
                 detail={"status": "error", "message": "Servicio no encontrado"}
             )
-
-        # Obtener solo campos enviados por el usuario
         update_data = servicio.model_dump(exclude_unset=True)
-
-        # Evitar que intenten actualizar el ID
         update_data.pop("id", None)
-
-        # Evitar campos anidados que no pertenecen al modelo
         update_data.pop("subdireccion", None)
-
-        # Actualizar cada campo enviado
         for key, value in update_data.items():
             setattr(db_servicio, key, value)
-
         db.commit()
         db.refresh(db_servicio)
-
         return {
             "status": "success",
             "message": "Servicio actualizado exitosamente",
             "data": {"id": db_servicio.id}
         }
-
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(
@@ -178,68 +120,23 @@ async def actualizar_servicio(
             }
         )
 
-# =========================
-# ENDPOINT: DESACTIVAR SERVICIO
-# =========================
-@router.patch("/actividad/desactivar/{servicio_id}", tags=["servicios_responsables"])
+
+@router.patch("/actividad/desactivar/{servicio_id}")
 async def desactivar_servicio(
     servicio_id: int,
     current_user: str = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
-    """
-    Desactiva el servicio responsable (no se elimina de la base de datos).
-    """
     try:
         servicio = db.query(Servicio_Encargado_Model).filter(
             Servicio_Encargado_Model.id == servicio_id
         ).first()
-
         if not servicio:
             raise HTTPException(status_code=404, detail="Servicio no encontrado")
-
         servicio.activo = False
         db.commit()
         db.refresh(servicio)
-
         return {"message": "Servicio desactivado exitosamente", "servicio_id": servicio.id}
-
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al desactivar el servicio: {e}")
-
-# =========================
-# ENDPOINT: Subdirección
-# =========================
-
-@router.get("/subdireccion/", response_model=List[SubdireccionPertenecienteUpdate], tags=["servicios_responsables"])
-async def listar_servicios(
-    id: Optional[int] = Query(None),
-    nombre: Optional[str] = Query(None),
-    activo: Optional[bool] = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1),
-    # token: str = Depends(oauth2_scheme),  # Requiere token
-    db: SQLAlchemySession = Depends(get_db)
-):
-    """
-    Lista actividades filtrando por múltiples parámetros opcionales.
-    Los filtros permiten búsquedas exactas o parciales.
-    """
-    try:
-        # Query base de la vista completa de actividades
-        query = db.query(Subdireccion_Perteneciente_Model).order_by(desc(Subdireccion_Perteneciente_Model.id))
-
-        # Aplicar filtros condicionales si se pasan parámetros
-        if id:
-            query = query.filter(Subdireccion_Perteneciente_Model.id == id)
-        if nombre:
-            query = query.filter(Subdireccion_Perteneciente_Model.nombre.ilike(f"%{nombre}%"))
-        if activo:
-            query = query.filter(Subdireccion_Perteneciente_Model.activo == activo)
-        
-        # Aplicar paginación
-        return query.offset(skip).limit(limit).all()
-
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=str(e))

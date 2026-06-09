@@ -29,6 +29,7 @@ from app.schemas.actividad import (
 
 from app.schemas.otras import (
     LugaresSchema,
+    LugaresCreate,
     LugaresUpdate,
     GrupoEdadSchema,
     GrupoEdadUpdate
@@ -124,8 +125,7 @@ async def actualizar_actividad(
         data = db.query(model).filter(model.id == data_id).first()
         if not data:
             raise HTTPException(status_code=404, detail="Actividad no encontrada")
-        # Actualiza solo los campos que se pasaron en el request
-        for key, value in model.model_dump(exclude_unset=True).items():
+        for key, value in schemadata.model_dump(exclude_unset=True).items():
             setattr(data, key, value)
 
         db.commit()
@@ -202,8 +202,7 @@ async def actualizar_modalidad(
         data = db.query(model).filter(model.id == data_id).first()
         if not data:
             raise HTTPException(status_code=404, detail="Actividad no encontrada")
-        # Actualiza solo los campos que se pasaron en el request
-        for key, value in model.model_dump(exclude_unset=True).items():
+        for key, value in schemadata.model_dump(exclude_unset=True).items():
             setattr(data, key, value)
 
         db.commit()
@@ -213,6 +212,7 @@ async def actualizar_modalidad(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    
     
 
 # =========================
@@ -280,8 +280,7 @@ async def actualizar_estado(
         data = db.query(model).filter(model.id == data_id).first()
         if not data:
             raise HTTPException(status_code=404, detail="data no encontrada")
-        # Actualiza solo los campos que se pasaron en el request
-        for key, value in model.model_dump(exclude_unset=True).items():
+        for key, value in schemadata.model_dump(exclude_unset=True).items():
             setattr(data, key, value)
 
         db.commit()
@@ -313,8 +312,73 @@ async def listar_lugares(
 
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
-        
+
+
+# =========================
+# ENDPOINT: CREAR LUGAR
+# =========================
+@router.post("/lugareRealizacion/", status_code=201, tags=["otros"])
+async def crear_lugar(
+    data: LugaresCreate,
+    current_user: str = Depends(get_current_user),
+    db: SQLAlchemySession = Depends(get_db),
+):
+    try:
+        lugar = LugaresModel(**data.model_dump())
+        db.add(lugar)
+        db.commit()
+        db.refresh(lugar)
+        return lugar
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =========================
+# ENDPOINT: ACTUALIZAR LUGAR
+# =========================
+@router.put("/lugareRealizacion/{lugar_id}", response_model=LugaresSchema, tags=["otros"])
+async def actualizar_lugar(
+    lugar_id: int,
+    data: LugaresUpdate,
+    current_user: str = Depends(get_current_user),
+    db: SQLAlchemySession = Depends(get_db),
+):
+    try:
+        lugar = db.query(LugaresModel).filter(LugaresModel.id == lugar_id).first()
+        if not lugar:
+            raise HTTPException(status_code=404, detail="Lugar no encontrado")
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(lugar, key, value)
+        db.commit()
+        db.refresh(lugar)
+        return lugar
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =========================
+# ENDPOINT: ELIMINAR LUGAR
+# =========================
+@router.delete("/lugareRealizacion/{lugar_id}", tags=["otros"])
+async def eliminar_lugar(
+    lugar_id: int,
+    current_user: str = Depends(get_current_user),
+    db: SQLAlchemySession = Depends(get_db),
+):
+    try:
+        lugar = db.query(LugaresModel).filter(LugaresModel.id == lugar_id).first()
+        if not lugar:
+            raise HTTPException(status_code=404, detail="Lugar no encontrado")
+        db.delete(lugar)
+        db.commit()
+        return {"message": "Lugar eliminado exitosamente"}
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # =========================
 # ENDPOINT: LISTAR GRUPOS DE EDAD
 # =========================

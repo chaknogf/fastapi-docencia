@@ -66,21 +66,32 @@ class TipoActividadCreate(BaseModel):
 # Subesquema para Subdirección
 # =========================================================
 class SubdireccionPertenecienteSchema(BaseModel):
-    
-    nombre: str                              # Nombre de la subdirección
-    descripcion: Optional[str] = None        # Descripción opcional
+    nombre: str
+    descripcion: Optional[str] = None
     persona_encargada: Optional[str] = None
-    activo: bool                             # Estado activo/inactivo
-    
+    activo: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class SubdireccionPertenecienteCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    persona_encargada: Optional[str] = None
+    activo: bool = True
     model_config = ConfigDict(from_attributes=True)
 
 class SubdireccionPertenecienteUpdate(BaseModel):
-    id: int
-    nombre: str                              # Nombre de la subdirección
-    descripcion: Optional[str] = None        # Descripción opcional
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
     persona_encargada: Optional[str] = None
-    activo: bool                             # Estado activo/inactivo
-    
+    activo: Optional[bool] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class SubdireccionPertenecienteOut(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+    persona_encargada: Optional[str] = None
+    activo: bool
     model_config = ConfigDict(from_attributes=True)
 
 # =========================================================

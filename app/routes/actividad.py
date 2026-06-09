@@ -14,8 +14,9 @@ from app.models.actividades import (
     ResumenAnualModel,
     VistaReporte,
     Vista_Ejecucion_Model,
-    Vista_Ejecucion_Model,
-    VistaActividad
+    VistaActividad,
+    Servicio_Encargado_Model,
+    Subdireccion_Perteneciente_Model,
 )
 from app.schemas.actividad import (
     ActividadBase,
@@ -141,13 +142,12 @@ async def crear_actividad(
     Crea una nueva actividad en la tabla `actividades`.
     """
     try:
-        # Convertimos el schema a diccionario
         actividad_dict = actividad.model_dump()
-
-        # 🔹 Eliminamos 'id' si existe para evitar conflicto con autoincrement
         actividad_dict.pop("id", None)
 
-        # Crear instancia del modelo con los datos del schema
+        if actividad_dict.get("fecha_programada"):
+            actividad_dict["mes_id"] = actividad_dict["fecha_programada"].month
+
         nueva_actividad = ActividadesModel(**actividad_dict)
 
         db.add(nueva_actividad)       # Agregar a sesión
@@ -179,8 +179,12 @@ async def actualizar_actividad(
         if not db_actividad:
             raise HTTPException(status_code=404, detail="Actividad no encontrada")
 
-        # Actualiza solo los campos que se pasaron en el request
-        for key, value in actividad.model_dump(exclude_unset=True).items():
+        update_data = actividad.model_dump(exclude_unset=True)
+
+        if update_data.get("fecha_programada"):
+            update_data["mes_id"] = update_data["fecha_programada"].month
+
+        for key, value in update_data.items():
             setattr(db_actividad, key, value)
 
         db.commit()
@@ -266,25 +270,54 @@ async def reporte_ejecucion(
     db: SQLAlchemySession = Depends(get_db),
 ):
     """
-    Reporte de ejecución agrupado por subdirección, servicio y año.
-    Permite filtrar opcionalmente por subdirección, servicio o año.
+    Reporte de ejecución por subdirección, servicio y año.
+    Incluye todos los servicios, incluso aquellos sin actividades (0 ejecución).
     """
-    query = db.query(Vista_Ejecucion_Model)
+    anio = anio or datetime.now().year
 
-    if sub:
-        query = query.filter(Vista_Ejecucion_Model.subdireccion_id == sub)
+    servicios = (
+        db.query(Servicio_Encargado_Model)
+        .filter(Servicio_Encargado_Model.activo == True)
+        .all()
+    )
     if servicio_id:
-        query = query.filter(Vista_Ejecucion_Model.servicio_id == servicio_id)
-    if anio:
-        query = query.filter(Vista_Ejecucion_Model.anio == anio)
-    if ejecutado is not None:
-        query = query.filter(Vista_Ejecucion_Model.ejecutado > ejecutado)
+        servicios = [s for s in servicios if s.id == servicio_id]
 
-    resultados = query.order_by(
-        desc(Vista_Ejecucion_Model.anio),
-        asc(Vista_Ejecucion_Model.subdireccion_id),
-        asc(Vista_Ejecucion_Model.servicio_id)
-    ).all()
+    ejecucion_por_servicio: dict = {}
+    view_query = db.query(Vista_Ejecucion_Model).filter(
+        Vista_Ejecucion_Model.anio == anio
+    )
+    if sub:
+        view_query = view_query.filter(Vista_Ejecucion_Model.subdireccion_id == sub)
+    if servicio_id:
+        view_query = view_query.filter(Vista_Ejecucion_Model.servicio_id == servicio_id)
+    if ejecutado is not None:
+        view_query = view_query.filter(Vista_Ejecucion_Model.ejecutado > ejecutado)
+
+    for row in view_query.all():
+        ejecucion_por_servicio[row.servicio_id] = row
+
+    resultados = []
+    for s in servicios:
+        if sub and (not s.subdireccion or s.subdireccion_id != sub):
+            continue
+
+        entry = ejecucion_por_servicio.get(s.id)
+        resultados.append(
+            VistaEjecucionSchema(
+                servicio_id=s.id,
+                servicio_encargado=s.nombre,
+                subdireccion_id=s.subdireccion_id,
+                subdireccion=s.subdireccion.nombre if s.subdireccion else None,
+                anio=anio,
+                completa=entry.completa if entry else 0,
+                programada=entry.programada if entry else 0,
+                reprogramada=entry.reprogramada if entry else 0,
+                suspendida=entry.suspendida if entry else 0,
+                total=entry.total if entry else 0,
+                ejecutado=entry.ejecutado if entry else 0.0,
+            )
+        )
 
     if not resultados:
         raise HTTPException(status_code=404, detail="No se encontraron resultados de ejecución")
