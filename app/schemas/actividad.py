@@ -235,6 +235,9 @@ class ActividadVista(BaseModel):
     # ✅ Permite crear instancias desde ORM (SQLAlchemy)
     model_config = ConfigDict(from_attributes=True)
 
+class ListaActividades(BaseModel):
+    total: int
+    actividades: list[ActividadVista]
 
 # =========================================================
 # Schema de salida con ID

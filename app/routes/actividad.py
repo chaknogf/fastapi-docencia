@@ -23,6 +23,7 @@ from app.schemas.actividad import (
     ActividadCreate,
     ActividadUpdate,
     ActividadVista,
+    ListaActividades,
     ReporteActividad,
     ResumenAnualSchema,
     VistaEjecucionSchema,
@@ -53,7 +54,7 @@ def get_db():
 # =========================
 # ENDPOINT: LISTAR ACTIVIDADES
 # =========================
-@router.get("/actividades/", response_model=List[ActividadVista], tags=["actividades"])
+@router.get("/actividades/", response_model=ListaActividades, tags=["actividades"])
 async def listar_actividades(
     id: Optional[int] = Query(None),
     tema: Optional[str] = Query(None),
@@ -70,18 +71,16 @@ async def listar_actividades(
     mes: Optional[int] = Query(None),
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
     lugar_id: Optional[int] = Query(None, description="ID del lugar de realización"),
-    # token: str = Depends(oauth2_scheme),  # Requiere token
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
-    Lista actividades filtrando por múltiples parámetros opcionales.
-    Los filtros permiten búsquedas exactas o parciales.
+    Lista actividades con paginación y filtros opcionales.
     """
     try:
-       # Query base
         query = db.query(VistaActividad)
 
-        # Filtros
         if id:
             query = query.filter(VistaActividad.id == id)
         if tema:
@@ -117,13 +116,15 @@ async def listar_actividades(
         if lugar_id:
             query = query.filter(VistaActividad.lugar_id == lugar_id)
 
-        # Orden inteligente: por fecha cuando hay filtro de mes, sino por ID descendente
         if mes is not None:
             query = query.order_by(asc(VistaActividad.fecha_programada))
         else:
             query = query.order_by(desc(VistaActividad.id))
 
-        return query.all()
+        total = query.count()
+        items = query.offset(skip).limit(limit).all()
+
+        return ListaActividades(total=total, actividades=items)
 
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
