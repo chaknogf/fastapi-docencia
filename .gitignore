@@ -1,19 +1,75 @@
-__pycache__/
-*.pyc
-*.pyo
+# ===========================================
+# FastAPI Docencia - Git Ignore
+# ===========================================
 
-# Ignorar archivos de entorno virtual
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+*.whl
+
+# Virtual Environment
 venv/
 env/
-*.env
+.venv/
+ENV/
 
-# Ignorar archivos de IDEs y editores
+# Environment Variables (SENSIBLE)
+.env
+.env.local
+.env.production
+.env.staging
+
+# IDEs and Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
 
-# Ignorar archivos de logs
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Logs
 *.log
+logs/
 
-# Ignorar archivos de sistema
+# OS Files
 .DS_Store
-Thumbs.db%
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Database backups (no versionar)
+*.sql
+!sql/init.sql
+!sql/actividad.sql
+
+# Reports (generated)
+reportes_excel/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/

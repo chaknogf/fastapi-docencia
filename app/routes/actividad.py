@@ -1,14 +1,13 @@
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import asc, desc, func, extract, Integer, cast
+from sqlalchemy import asc, desc
 
-
-from app.database.db import SessionLocal
-from app.database.security import oauth2_scheme, get_current_user
+from app.database.db import get_db
+from app.database.security import get_current_user, get_current_admin_user
+from app.models.user import UserModel
 from app.models.actividades import (
     ActividadesModel,
     ResumenAnualModel,
@@ -16,39 +15,20 @@ from app.models.actividades import (
     Vista_Ejecucion_Model,
     VistaActividad,
     Servicio_Encargado_Model,
-    Subdireccion_Perteneciente_Model,
 )
 from app.schemas.actividad import (
     ActividadBase,
-    ActividadCreate,
     ActividadUpdate,
-    ActividadVista,
     ListaActividades,
     ReporteActividad,
     ResumenAnualSchema,
     VistaEjecucionSchema,
-    
 )
 
 # =========================
-# ROUTER Y SEGURIDAD
+# ROUTER
 # =========================
-router = APIRouter()  # Instancia de APIRouter de FastAPI
-
-
-# =========================
-# DEPENDENCIA DE DB
-# =========================
-def get_db():
-    """
-    Genera y cierra la sesión de la base de datos por petición.
-    Esto se usa en los endpoints con `Depends(get_db)`.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+router = APIRouter()
 
 
 # =========================
@@ -127,20 +107,26 @@ async def listar_actividades(
         return ListaActividades(total=total, actividades=items)
 
     except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
 # =========================
 # ENDPOINT: CREAR ACTIVIDAD
 # =========================
-@router.post("/actividad/crear/", status_code=201, tags=["actividades"])
+@router.post(
+    "/actividad/crear/",
+    status_code=201,
+    tags=["actividades"],
+    dependencies=[Depends(get_current_user)]
+)
 async def crear_actividad(
-    actividad: ActividadBase, 
-    # token: str = Depends(oauth2_scheme),
+    actividad: ActividadBase,
+    current_user: UserModel = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
     Crea una nueva actividad en la tabla `actividades`.
+    Requiere autenticación.
     """
     try:
         actividad_dict = actividad.model_dump()
@@ -149,17 +135,21 @@ async def crear_actividad(
         if actividad_dict.get("fecha_programada"):
             actividad_dict["mes_id"] = actividad_dict["fecha_programada"].month
 
-        nueva_actividad = ActividadesModel(**actividad_dict)
+        # Agregar metadatos del usuario
+        if "metadatos" not in actividad_dict or actividad_dict["metadatos"] is None:
+            actividad_dict["metadatos"] = {}
+        actividad_dict["metadatos"]["user"] = current_user.username
 
-        db.add(nueva_actividad)       # Agregar a sesión
-        db.commit()                   # Guardar cambios
-        db.refresh(nueva_actividad)   # Refrescar para obtener ID generado
+        nueva_actividad = ActividadesModel(**actividad_dict)
+        db.add(nueva_actividad)
+        db.commit()
+        db.refresh(nueva_actividad)
 
         return {"message": "Actividad creada exitosamente", "id": nueva_actividad.id}
 
     except SQLAlchemyError as e:
-        db.rollback()  # Deshacer cambios en caso de error
-        raise HTTPException(status_code=500, detail=str(e))
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al crear actividad")
 
 
 # =========================
@@ -169,7 +159,7 @@ async def crear_actividad(
 async def actualizar_actividad(
     actividad_id: int,
     actividad: ActividadUpdate,
-    current_user: str = Depends(get_current_user),
+    current_user: UserModel = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
@@ -179,6 +169,14 @@ async def actualizar_actividad(
         db_actividad = db.query(ActividadesModel).filter(ActividadesModel.id == actividad_id).first()
         if not db_actividad:
             raise HTTPException(status_code=404, detail="Actividad no encontrada")
+
+        # Verificar permisos: admin o dueño del servicio
+        if current_user.role != "admin":
+            if db_actividad.servicio_id != current_user.servicio_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="No tiene permiso para actualizar esta actividad"
+                )
 
         update_data = actividad.model_dump(exclude_unset=True)
 
@@ -194,20 +192,25 @@ async def actualizar_actividad(
 
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al actualizar actividad")
 
 
 # =========================
 # ENDPOINT: ELIMINAR ACTIVIDAD
 # =========================
-@router.delete("/actividad/eliminar/{actividad_id}", tags=["actividades"])
+@router.delete(
+    "/actividad/eliminar/{actividad_id}",
+    tags=["actividades"],
+    dependencies=[Depends(get_current_admin_user)]
+)
 async def eliminar_actividad(
     actividad_id: int,
-    current_user: str = Depends(get_current_user),
+    current_user: UserModel = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
     Elimina una actividad por su ID.
+    Solo administradores pueden eliminar.
     """
     try:
         db_actividad = db.query(ActividadesModel).filter(ActividadesModel.id == actividad_id).first()
@@ -220,7 +223,7 @@ async def eliminar_actividad(
 
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al eliminar actividad")
 
 
 # =========================
@@ -231,9 +234,8 @@ async def reporte_vista(
     mes: Optional[int] = Query(None, description="Número del mes (1-12)"),
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
     subId: Optional[int] = Query(None, description="ID de la subdirección"),
-    servicioId: Optional[int] = Query(None, description='ID de el servicio responsable'),
+    servicioId: Optional[int] = Query(None, description='ID del servicio responsable'),
     db: SQLAlchemySession = Depends(get_db),
-    # token: str = Depends(oauth2_scheme)
 ):
     """
     Retorna la lista de reportes resumidos filtrando opcionalmente por mes y año.
@@ -245,13 +247,13 @@ async def reporte_vista(
         query = query.filter(VistaReporte.anio == anio)
     if subId is not None:
         query = query.filter(VistaReporte.subdireccion_id == subId)
-    if servicioId  is not None:
+    if servicioId is not None:
         query = query.filter(VistaReporte.servicio_id == servicioId)
     reportes = query.all()
-    
+
     if not reportes:
         raise HTTPException(status_code=404, detail="No se encontraron reportes.")
-    
+
     return reportes
 
 
@@ -325,13 +327,14 @@ async def reporte_ejecucion(
 
     return resultados
 
+
 @router.get("/reporte/resumen-anual", response_model=List[ResumenAnualSchema], tags=["reportes"])
-async def reporte_resumen_anual( 
+async def reporte_resumen_anual(
     anio: Optional[int] = None,
     db: SQLAlchemySession = Depends(get_db)
 ):
     query = db.query(ResumenAnualModel)
-    
+
     if anio is not None:
         query = query.filter(ResumenAnualModel.anio == anio)
 

@@ -1,34 +1,20 @@
 from datetime import datetime
-from typing import Optional, List, Dict
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from fastapi.encoders import jsonable_encoder
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import asc, desc, func, extract, Integer, cast
-from app.config.mail_config import conf
-from fastapi_mail import FastMail, MessageSchema, MessageType
-from app.database.db import SessionLocal
+from sqlalchemy import asc, desc, func
+
+from app.database.db import get_db
+from app.database.security import get_current_user
+from app.models.user import UserModel
 from app.models.asistencia import Asistencia
 from app.schemas.asistencia import AsistenciaCreate, AsistenciaBase, AsistenciaRead
-from app.database.security import oauth2_scheme
 
 # =========================
-# ROUTER Y SEGURIDAD
+# ROUTER
 # =========================
 router = APIRouter(prefix="/asistencia", tags=["Asistencia"])
-
-# =========================
-# DEPENDENCIA DE DB
-# =========================
-def get_db():
-    """
-    Genera y cierra la sesión de la base de datos por petición.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 # =========================
@@ -37,10 +23,12 @@ def get_db():
 @router.post("/", response_model=AsistenciaRead)
 async def registrar_asistencia(
     data: AsistenciaCreate,
+    current_user: UserModel = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
     Registra una nueva asistencia vinculada a una capacitación (actividad).
+    Requiere autenticación.
     """
     try:
         nueva = Asistencia(**data.model_dump())
@@ -51,9 +39,7 @@ async def registrar_asistencia(
 
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error en base de datos: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al registrar asistencia")
 
 
 # =========================
@@ -66,11 +52,14 @@ async def listar_asistencias(
     fecha_desde: Optional[str] = Query(None, description="Fecha inicial (YYYY-MM-DD)"),
     fecha_hasta: Optional[str] = Query(None, description="Fecha final (YYYY-MM-DD)"),
     db: SQLAlchemySession = Depends(get_db),
-    orden: Optional[str] = Query("asc", description="Orden ascendente o descendente por fecha")
+    orden: Optional[str] = Query("asc", description="Orden ascendente o descendente por fecha"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    current_user: UserModel = Depends(get_current_user),
 ):
     """
-    Devuelve la lista de asistencias registradas sin límite.
-    Permite filtrado y ordenamiento.
+    Devuelve la lista de asistencias registradas.
+    Permite filtrado, ordenamiento y paginación.
     """
     try:
         query = db.query(Asistencia)
@@ -84,17 +73,25 @@ async def listar_asistencias(
         if fecha_hasta:
             query = query.filter(func.date(Asistencia.fecha_registro) <= fecha_hasta)
 
-        query = query.order_by(desc(Asistencia.fecha_registro) if orden == "desc" else asc(Asistencia.fecha_registro))
-        return query.all()
+        query = query.order_by(
+            desc(Asistencia.fecha_registro) if orden == "desc" else asc(Asistencia.fecha_registro)
+        )
+
+        return query.offset(skip).limit(limit).all()
+
     except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error en base de datos: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al obtener asistencias")
 
 
 # =========================
 # OBTENER ASISTENCIA POR ID
 # =========================
 @router.get("/{asistencia_id}", response_model=AsistenciaRead)
-async def obtener_asistencia(asistencia_id: int, db: SQLAlchemySession = Depends(get_db)):
+async def obtener_asistencia(
+    asistencia_id: int,
+    db: SQLAlchemySession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
     """
     Retorna un registro de asistencia específico.
     """
@@ -111,7 +108,8 @@ async def obtener_asistencia(asistencia_id: int, db: SQLAlchemySession = Depends
 async def actualizar_asistencia(
     asistencia_id: int,
     data: AsistenciaBase,
-    db: SQLAlchemySession = Depends(get_db)
+    db: SQLAlchemySession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     """
     Actualiza los datos de una asistencia existente.
@@ -130,16 +128,18 @@ async def actualizar_asistencia(
 
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al actualizar: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al actualizar asistencia")
 
 
 # =========================
 # ELIMINAR ASISTENCIA
 # =========================
 @router.delete("/{asistencia_id}")
-async def eliminar_asistencia(asistencia_id: int, db: SQLAlchemySession = Depends(get_db)):
+async def eliminar_asistencia(
+    asistencia_id: int,
+    db: SQLAlchemySession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
     """
     Elimina un registro de asistencia por su ID.
     """
@@ -154,4 +154,4 @@ async def eliminar_asistencia(asistencia_id: int, db: SQLAlchemySession = Depend
 
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al eliminar: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al eliminar asistencia")

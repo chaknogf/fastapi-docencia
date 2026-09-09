@@ -1,33 +1,24 @@
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from fastapi.encoders import jsonable_encoder
-from datetime import time
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import asc, desc, func, extract, Integer, cast
+from sqlalchemy import desc
+
+from app.database.db import get_db
+from app.database.security import oauth2_scheme
 from app.config.mail_config import conf
 from fastapi_mail import FastMail, MessageSchema, MessageType
-
-from app.database.db import SessionLocal
-from app.database.security import oauth2_scheme
 from app.models.actividades import VistaActividad
-from app.schemas.actividad import ActividadVista
 from app.models.user import UserModel
-from app.schemas.schemas import UserResponse
 
 router = APIRouter(tags=["actividades"])
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 def _generar_cuerpo_html(usuario: UserModel, mes_actual: int, db: SQLAlchemySession) -> Optional[str]:
+    """
+    Genera el cuerpo HTML del correo mensual de actividades.
+    """
     servicio_id = usuario.servicio_id
 
     actividades_servicio = (
@@ -77,7 +68,10 @@ def _generar_cuerpo_html(usuario: UserModel, mes_actual: int, db: SQLAlchemySess
     """
 
 
-def enviar_correos_mensuales(db: SQLAlchemySession) -> int:
+async def enviar_correos_mensuales_async(db: SQLAlchemySession) -> int:
+    """
+    Envía correos mensuales de forma asíncrona.
+    """
     usuarios = db.query(UserModel).filter(UserModel.email.isnot(None)).all()
     mes_actual = datetime.now().month
     enviados = 0
@@ -97,7 +91,7 @@ def enviar_correos_mensuales(db: SQLAlchemySession) -> int:
         )
 
         try:
-            fm.send_message(message)
+            await fm.send_message(message)
             enviados += 1
         except Exception as e:
             print(f"Error enviando correo a {usuario.email}: {e}")
@@ -105,25 +99,54 @@ def enviar_correos_mensuales(db: SQLAlchemySession) -> int:
     return enviados
 
 
+def enviar_correos_mensuales(db: SQLAlchemySession) -> int:
+    """
+    Versión síncrona para BackgroundTasks.
+    """
+    import asyncio
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # Si ya hay un loop corriendo, crear una tarea
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(
+                    asyncio.run,
+                    enviar_correos_mensuales_async(db)
+                )
+                return result.result()
+        else:
+            return loop.run_until_complete(enviar_correos_mensuales_async(db))
+    except RuntimeError:
+        return asyncio.run(enviar_correos_mensuales_async(db))
+
+
 @router.post("/actividades/enviar-mensual")
 async def enviar_actividades_mensuales(
     background_tasks: BackgroundTasks,
     db: SQLAlchemySession = Depends(get_db),
 ):
+    """
+    Programa el envío de correos mensuales en segundo plano.
+    """
     try:
         background_tasks.add_task(enviar_correos_mensuales, db)
         return {"mensaje": "Envío de correos programado en segundo plano"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al programar envío")
 
 
 @router.post("/verificador/")
 async def validar_no_coincidan_actividades(
     fecha: str,
-    hora: Optional[time] = Query(None),
+    hora: Optional[str] = Query(None),
     actividad_id: Optional[int] = Query(None),
     db: SQLAlchemySession = Depends(get_db)
 ):
+    """
+    Valida que no existan conflictos de horario para una actividad.
+    """
     try:
         fecha_convertida = datetime.strptime(fecha, "%Y-%m-%d").date()
     except ValueError:
@@ -139,6 +162,7 @@ async def validar_no_coincidan_actividades(
     if hora is not None:
         query = query.filter(VistaActividad.horario_programado == hora)
 
+    # Excluir lugares especiales (ej: virtual)
     query = query.filter(VistaActividad.lugar_id != 3)
 
     if actividad_id is not None:
@@ -155,7 +179,7 @@ async def validar_no_coincidan_actividades(
 
     return {
         "valido": False,
-        "mensaje": "Existen actividades que coinciden en fecha u horario. Porfavor programa otra fecha u hora.",
+        "mensaje": "Existen actividades que coinciden en fecha u horario. Por favor programa otra fecha u hora.",
         "coincidencias": [
             {
                 "id": c.id,

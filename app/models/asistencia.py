@@ -1,28 +1,28 @@
 from sqlalchemy import BigInteger, Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship, deferred, validates
+from sqlalchemy.orm import relationship, validates
 from app.database.db import Base
-from datetime import datetime
+from datetime import datetime, timezone
+
 
 class PertenenciaCulturalModel(Base):
     __tablename__ = "pertenencia_cultural"
     __table_args__ = {"extend_existing": True}
-    
+
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), nullable=False)
 
-asistencias = relationship("Asistencia", back_populates="pertenencias")
+    asistencias = relationship("Asistencia", back_populates="pertenencia")
+
 
 class SexoModel(Base):
     __tablename__ = "sexo"
     __table_args__ = {"extend_existing": True}
-    
+
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), nullable=False)
 
-asistencias = relationship("Asistencia", back_populates="sexos")
-
-
+    asistencias = relationship("Asistencia", back_populates="sexo")
 
 
 class Asistencia(Base):
@@ -39,11 +39,12 @@ class Asistencia(Base):
     telefono_email = Column(String(150))
     datos_extras = Column(JSONB, nullable=True)
     capacitacion_id = Column(Integer, ForeignKey("actividades.id", ondelete="CASCADE"), nullable=False)
-    fecha_registro = Column(DateTime, default=datetime.utcnow)
-    
+    fecha_registro = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    pertenencia = relationship("PertenenciaCulturalModel", back_populates="asistencias")
+    sexo = relationship("SexoModel", back_populates="asistencias")
+    capacitacion = relationship("ActividadesModel", back_populates="asistencias")
+
     @validates("nombre_completo")
     def convert_nombre(self, key, value):
-        return value.upper()  # o value.capitalize()  
-    
-pertenencias = relationship("PertenenciaCulturalModel", back_populates="asistencias")
-sexos = relationship("SexoModel", back_populates="asistencias")
+        return value.upper() if value else value

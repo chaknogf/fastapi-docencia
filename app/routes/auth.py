@@ -1,89 +1,120 @@
 # app/routes/auth.py
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.database.db import SessionLocal
-from app.models.user import UserModel
+"""
+Endpoints de autenticación social (email magic link).
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session as SQLAlchemySession
+from sqlalchemy.exc import SQLAlchemyError
+import logging
+
+from app.database.db import get_db
 from app.database.security import create_access_token
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
-import asyncio
+from app.models.user import UserModel
+from app.config.mail_config import conf
+from app.core.rate_limiting import limiter, AUTH_RATE_LIMIT
+from fastapi_mail import FastMail, MessageSchema, MessageType
 
-router = APIRouter()
+logger = logging.getLogger(__name__)
 
-# Configuración del correo
-conf = ConnectionConfig(
-    MAIL_USERNAME="soporte@tuservidor.com",
-    MAIL_PASSWORD="TU_CONTRASEÑA",
-    MAIL_FROM="ticshosptecpan@gmail.com",
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_TLS=True,
-    MAIL_SSL=False,
-    USE_CREDENTIALS=True
-)
+router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Dependencia de DB
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
-# Función para enviar correo de bienvenida
 async def send_welcome_email(email: str, nombre: str, username: str):
-    message = MessageSchema(
-        subject="Bienvenido a Docencia",
-        recipients=[email],
-        body=f"Hola {nombre}, tu cuenta ha sido creada con éxito.\n\nTu usuario es: {username}\nAccede con tu correo para iniciar sesión.",
-        subtype="plain"
-    )
-    fm = FastMail(conf)
-    await fm.send_message(message)
+    """Envía correo de bienvenida al nuevo usuario."""
+    try:
+        message = MessageSchema(
+            subject="Bienvenido a Docencia Tecpán",
+            recipients=[email],
+            body=f"""
+            <div style="font-family: Arial, sans-serif;">
+                <h2>¡Hola {nombre}!</h2>
+                <p>Tu cuenta ha sido creada exitosamente.</p>
+                <p><b>Usuario:</b> {username}</p>
+                <p><b>Correo:</b> {email}</p>
+                <p>Ingresa al sistema para configurar tu contraseña.</p>
+            </div>
+            """,
+            subtype=MessageType.html
+        )
+        fm = FastMail(conf)
+        await fm.send_message(message)
+    except Exception as e:
+        logger.error(f"Error enviando correo de bienvenida: {e}")
 
-# Endpoint de login/registro por email
-@router.post("/auth/email")
-async def auth_email(payload: dict, db: Session = Depends(get_db)):
+
+@router.post("/email")
+@limiter.limit(AUTH_RATE_LIMIT)
+async def auth_email(
+    request: Request,
+    payload: dict,
+    db: SQLAlchemySession = Depends(get_db)
+):
+    """
+    Autenticación mágica por email.
+    Si el usuario no existe, lo crea automáticamente.
+    """
     email = payload.get("email")
-    nombre = payload.get("nombre", email.split("@")[0])
+    nombre = payload.get("nombre", email.split("@")[0]) if email else None
 
     if not email:
         raise HTTPException(status_code=400, detail="Correo requerido")
 
-    # Buscar usuario existente
-    usuario = db.query(UserModel).filter(UserModel.email == email).first()
+    # Validación básica de email
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Formato de correo inválido")
 
-    if not usuario:
-        # Crear usuario automáticamente
-        username = email.split("@")[0]
-        usuario = UserModel(
-            nombre=nombre,
-            username=username,
-            email=email,
-            password=None,
-            role="usuario",
-            estado="A",
-            servicio_id=None
-        )
-        db.add(usuario)
-        db.commit()
-        db.refresh(usuario)
+    try:
+        # Buscar usuario existente
+        usuario = db.query(UserModel).filter(UserModel.email == email).first()
 
-        # Enviar correo de bienvenida en background
-        asyncio.create_task(send_welcome_email(email, nombre, username))
-    else:
-        username = usuario.username
+        if not usuario:
+            # Crear usuario automáticamente
+            username = email.split("@")[0]
 
-    # Generar JWT
-    access_token = create_access_token({"sub": username})
+            # Verificar que el username no exista
+            existing_username = db.query(UserModel).filter(
+                UserModel.username == username
+            ).first()
+            if existing_username:
+                import time
+                username = f"{username}{int(time.time()) % 10000}"
 
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "usuario": {
-            "username": username,
-            "email": email,
-            "nombre": nombre,
-            "role": usuario.role,
-            "servicio_id": usuario.servicio_id
+            usuario = UserModel(
+                nombre=nombre,
+                username=username,
+                email=email,
+                password=None,
+                role="user",
+                estado="A",
+                servicio_id=None
+            )
+            db.add(usuario)
+            db.commit()
+            db.refresh(usuario)
+
+            # Enviar correo de bienvenida
+            import asyncio
+            asyncio.create_task(send_welcome_email(email, nombre, username))
+        else:
+            username = usuario.username
+
+        # Generar JWT
+        access_token = create_access_token({"sub": username})
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "usuario": {
+                "username": username,
+                "email": email,
+                "nombre": nombre,
+                "role": usuario.role,
+                "servicio_id": usuario.servicio_id
+            }
         }
-    }
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error en autenticación: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
