@@ -1,6 +1,6 @@
 from datetime import datetime, date, timedelta
 from typing import Optional, List, Tuple
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Request
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import desc, asc
@@ -8,6 +8,7 @@ from sqlalchemy import desc, asc
 from app.database.db import get_db
 from app.database.security import oauth2_scheme, get_current_admin_user
 from app.config.mail_config import conf
+from app.core.rate_limiting import limiter, WRITE_RATE_LIMIT
 from fastapi_mail import FastMail, MessageSchema, MessageType
 from app.models.actividades import VistaActividad
 from app.models.user import UserModel
@@ -370,7 +371,9 @@ def enviar_correos_semanales(db: SQLAlchemySession) -> int:
 
 
 @router.post("/actividades/enviar-semanal")
+@limiter.limit(WRITE_RATE_LIMIT)
 async def enviar_actividades_semanales(
+    request: Request,
     background_tasks: BackgroundTasks,
     current_user: UserModel = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db),
@@ -389,7 +392,9 @@ async def enviar_actividades_semanales(
 
 
 @router.post("/actividades/enviar-mensual")
+@limiter.limit(WRITE_RATE_LIMIT)
 async def enviar_actividades_mensuales(
+    request: Request,
     background_tasks: BackgroundTasks,
     db: SQLAlchemySession = Depends(get_db),
 ):
@@ -404,7 +409,9 @@ async def enviar_actividades_mensuales(
 
 
 @router.post("/verificador/")
+@limiter.limit(WRITE_RATE_LIMIT)
 async def validar_no_coincidan_actividades(
+    request: Request,
     fecha: str,
     hora: Optional[str] = Query(None),
     actividad_id: Optional[int] = Query(None),

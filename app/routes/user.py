@@ -32,7 +32,7 @@ from app.schemas.schemas import (
     RestablecerContrasenaRequest,
 )
 from app.config.mail_config import conf
-from app.core.rate_limiting import limiter, AUTH_RATE_LIMIT, WRITE_RATE_LIMIT
+from app.core.rate_limiting import limiter, AUTH_RATE_LIMIT, WRITE_RATE_LIMIT, READ_RATE_LIMIT
 from fastapi_mail import FastMail, MessageSchema, MessageType
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,9 @@ router = APIRouter()
 # ENDPOINT: LISTAR USUARIOS
 # =========================
 @router.get("/user/", response_model=List[UserResponse], tags=["users"])
+@limiter.limit(READ_RATE_LIMIT)
 async def get_users(
+    request: Request,
     id: Optional[int] = Query(None, description="ID del usuario"),
     nombre: Optional[str] = Query(None, description="Nombre del usuario"),
     username: Optional[str] = Query(None, description="Username del usuario"),
@@ -90,7 +92,9 @@ async def get_users(
     tags=["users"],
     dependencies=[Depends(get_current_admin_user)]
 )
+@limiter.limit(WRITE_RATE_LIMIT)
 async def create_user_admin(
+    request: Request,
     user: UserCreate,
     current_user: UserModel = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db)
@@ -133,7 +137,9 @@ async def create_user_admin(
     tags=["users"],
     response_model=UserResponse
 )
+@limiter.limit(WRITE_RATE_LIMIT)
 async def update_user(
+    request: Request,
     user_id: int,
     user: UserUpdate,
     current_user: UserModel = Depends(get_current_user),
@@ -187,7 +193,9 @@ async def update_user(
     tags=["users"],
     dependencies=[Depends(get_current_admin_user)]
 )
+@limiter.limit(WRITE_RATE_LIMIT)
 async def delete_user(
+    request: Request,
     user_id: int,
     current_user: UserModel = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db)
@@ -221,7 +229,12 @@ async def delete_user(
 # REGISTRO PUBLICO CON CORREO
 # =========================
 @router.post("/user/registro", tags=["users"])
-async def register_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db)):
+@limiter.limit(AUTH_RATE_LIMIT)
+async def register_user(
+    request: Request,
+    user: UserCreate,
+    db: SQLAlchemySession = Depends(get_db)
+):
     """
     Registra un usuario y envía correo de bienvenida.
     """

@@ -3,6 +3,7 @@ FastAPI Docencia - Punto de entrada principal
 """
 
 from contextlib import asynccontextmanager
+import os
 from fastapi import FastAPI
 import uvicorn
 from sqlalchemy import text
@@ -117,10 +118,19 @@ app = FastAPI(
 # MIDDLEWARE
 # ===========================================
 
-# CORS
+# CORS: solo orígenes permitidos (configurable vía CORS_ORIGINS, separados por coma).
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "https://www.htecpan.com,https://htecpan.com,http://localhost:4200",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -185,5 +195,9 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=ENVIRONMENT == "development"
+        reload=ENVIRONMENT == "development",
+        proxy_headers=True,
+        # Confía en X-Forwarded-For solo desde proxies confiables (nginx local).
+        # El rate limiter lee la IP real del cliente en lugar de 127.0.0.1.
+        forwarded_allow_ips=os.getenv("FORWARDED_ALLOW_IPS", "127.0.0.1"),
     )

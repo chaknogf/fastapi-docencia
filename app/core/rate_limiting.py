@@ -9,17 +9,25 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from fastapi import Request
 from fastapi.responses import JSONResponse
+import os
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 
 # ===========================================
 # CONFIGURACIÓN DEL LIMITER
 # ===========================================
 
+# Store configurable: "memory://" para desarrollo, Redis en producción.
+#   RATE_LIMIT_STORAGE=redis://localhost:6379
+RATE_LIMIT_STORAGE = os.getenv("RATE_LIMIT_STORAGE", "memory://")
+
 # Crear limitador con Redis como store (fallback a memoria)
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200/minute"],  # Límite por defecto
-    storage_uri="memory://",  # Usar Redis en producción: "redis://localhost:6379"
+    storage_uri=RATE_LIMIT_STORAGE,
 )
 
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,6 +13,7 @@ from pathlib import Path
 import time
 
 from app.apicore import get_db
+from app.core.rate_limiting import limiter, REPORT_RATE_LIMIT
 from app.models.actividades import VistaActividad
 from app.schemas.actividad import ActividadVista
 
@@ -31,7 +32,9 @@ def limpiar_reportes_antiguos(directorio: Path, horas: int = 24):
 
 
 @router.get("/reporte/excel")
+@limiter.limit(REPORT_RATE_LIMIT)
 async def generar_reporte_excel(
+    request: Request,
     anio: Optional[int] = Query(None),
     mes: Optional[int] = Query(None),
     subdireccion_id: Optional[int] = Query(None),

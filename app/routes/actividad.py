@@ -1,11 +1,18 @@
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import asc, desc
 
 from app.database.db import get_db
+from app.core.rate_limiting import (
+    limiter,
+    READ_RATE_LIMIT,
+    WRITE_RATE_LIMIT,
+    REPORT_RATE_LIMIT,
+    PUBLIC_RATE_LIMIT,
+)
 from app.database.security import get_current_user, get_current_admin_user
 from app.models.user import UserModel
 from app.models.actividades import (
@@ -35,7 +42,9 @@ router = APIRouter()
 # ENDPOINT: LISTAR ACTIVIDADES
 # =========================
 @router.get("/actividades/", response_model=ListaActividades, tags=["actividades"])
+@limiter.limit(READ_RATE_LIMIT)
 async def listar_actividades(
+    request: Request,
     id: Optional[int] = Query(None),
     tema: Optional[str] = Query(None),
     actividad: Optional[str] = Query(None),
@@ -119,7 +128,9 @@ async def listar_actividades(
     tags=["actividades"],
     dependencies=[Depends(get_current_user)]
 )
+@limiter.limit(WRITE_RATE_LIMIT)
 async def crear_actividad(
+    request: Request,
     actividad: ActividadBase,
     current_user: UserModel = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
@@ -156,7 +167,9 @@ async def crear_actividad(
 # ENDPOINT: ACTUALIZAR ACTIVIDAD
 # =========================
 @router.put("/actividad/actualizar/{actividad_id}", tags=["actividades"])
+@limiter.limit(WRITE_RATE_LIMIT)
 async def actualizar_actividad(
+    request: Request,
     actividad_id: int,
     actividad: ActividadUpdate,
     current_user: UserModel = Depends(get_current_user),
@@ -203,7 +216,9 @@ async def actualizar_actividad(
     tags=["actividades"],
     dependencies=[Depends(get_current_admin_user)]
 )
+@limiter.limit(WRITE_RATE_LIMIT)
 async def eliminar_actividad(
+    request: Request,
     actividad_id: int,
     current_user: UserModel = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db)
@@ -230,7 +245,9 @@ async def eliminar_actividad(
 # ENDPOINT: REPORTE DE ACTIVIDADES
 # =========================
 @router.get("/reporte/vista", response_model=List[ReporteActividad], tags=["reportes"])
+@limiter.limit(REPORT_RATE_LIMIT)
 async def reporte_vista(
+    request: Request,
     mes: Optional[int] = Query(None, description="Número del mes (1-12)"),
     anio: Optional[int] = Query(None, description="Año (ej. 2025)"),
     subId: Optional[int] = Query(None, description="ID de la subdirección"),
@@ -265,7 +282,9 @@ async def reporte_vista(
     response_model=List[VistaEjecucionSchema],
     tags=["reportes"]
 )
+@limiter.limit(REPORT_RATE_LIMIT)
 async def reporte_ejecucion(
+    request: Request,
     sub: int | None = Query(None),
     servicio_id: int | None = Query(None),
     anio: int | None = Query(None),
@@ -329,7 +348,9 @@ async def reporte_ejecucion(
 
 
 @router.get("/reporte/resumen-anual", response_model=List[ResumenAnualSchema], tags=["reportes"])
+@limiter.limit(REPORT_RATE_LIMIT)
 async def reporte_resumen_anual(
+    request: Request,
     anio: Optional[int] = None,
     db: SQLAlchemySession = Depends(get_db)
 ):

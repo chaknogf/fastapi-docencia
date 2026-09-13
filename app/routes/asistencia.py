@@ -1,11 +1,17 @@
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import asc, desc, func
 
 from app.database.db import get_db
+from app.core.rate_limiting import (
+    limiter,
+    READ_RATE_LIMIT,
+    WRITE_RATE_LIMIT,
+    PUBLIC_RATE_LIMIT,
+)
 from app.database.security import get_current_user
 from app.models.user import UserModel
 from app.models.asistencia import Asistencia
@@ -21,7 +27,9 @@ router = APIRouter(prefix="/asistencia", tags=["Asistencia"])
 # CREAR ASISTENCIA
 # =========================
 @router.post("/", response_model=AsistenciaRead)
+@limiter.limit(WRITE_RATE_LIMIT)
 async def registrar_asistencia(
+    request: Request,
     data: AsistenciaCreate,
     current_user: UserModel = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
@@ -46,7 +54,9 @@ async def registrar_asistencia(
 # LISTAR TODAS LAS ASISTENCIAS
 # =========================
 @router.get("/", response_model=List[AsistenciaRead])
+@limiter.limit(READ_RATE_LIMIT)
 async def listar_asistencias(
+    request: Request,
     capacitacion: Optional[int] = Query(None),
     fecha: Optional[str] = Query(None),
     fecha_desde: Optional[str] = Query(None, description="Fecha inicial (YYYY-MM-DD)"),
