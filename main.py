@@ -123,7 +123,7 @@ CORS_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ORIGINS",
-        "https://www.htecpan.com,https://htecpan.com,http://localhost:4200",
+        "https://www.htecpan.com,https://htecpan.com,http://localhost:4200,https://www.htecpan.com/fad/",
     ).split(",")
     if origin.strip()
 ]
