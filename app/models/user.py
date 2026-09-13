@@ -20,6 +20,9 @@ class UserModel(Base):
 )
    # google_id = Column(String(100), unique=True, nullable=True)
    servicio = relationship("Servicio_Encargado_Model", back_populates="usuarios")
+   # Versión de token de recuperación de contraseña. Se incrementa al solicitar
+   # una recuperación y al restablecer la contraseña → invalida enlaces previos.
+   reset_token_version = Column(Integer, default=0, nullable=False)
    
    #@property
    #def is_admin(self) -> bool:

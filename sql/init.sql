@@ -123,6 +123,7 @@ CREATE TABLE users (
     password character varying(255) NOT NULL,
     role character varying(50) NOT NULL,
     estado character(1),
+    reset_token_version integer DEFAULT 0 NOT NULL,
     creado_en timestamp without time zone DEFAULT now(),
     actualizado_en timestamp without time zone DEFAULT now()
 );

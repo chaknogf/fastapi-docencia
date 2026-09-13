@@ -313,8 +313,12 @@ async def recuperar_contrasena(
             # No revelar si el email existe
             return {"message": "Si el correo existe, recibirás instrucciones para restablecer tu contraseña"}
 
+        reset_token_version = (usuario.reset_token_version or 0) + 1
+        usuario.reset_token_version = reset_token_version
+        db.commit()
+
         reset_token = create_access_token(
-            data={"sub": usuario.username},
+            data={"sub": usuario.username, "ver": reset_token_version},
             expires_delta=timedelta(minutes=30),
             purpose="password_reset"
         )
@@ -399,7 +403,13 @@ async def restablecer_contrasena(
         if not usuario:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+        # Token de un solo uso: el "ver" del token debe coincidir con la versión vigente
+        if payload.get("ver") != usuario.reset_token_version:
+            raise HTTPException(status_code=400, detail="Token inválido o expirado")
+
         usuario.password = pwd_context.hash(data.new_password)
+        # Invalida este token y cualquier otro enlace aún pendiente
+        usuario.reset_token_version = (usuario.reset_token_version or 0) + 1
         db.commit()
 
         return {"message": "Contraseña restablecida exitosamente"}
