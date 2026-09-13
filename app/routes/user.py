@@ -1,5 +1,6 @@
 from datetime import timedelta
 import logging
+import os
 
 from jose import JWTError, jwt
 from sqlalchemy.exc import SQLAlchemyError
@@ -35,6 +36,8 @@ from app.core.rate_limiting import limiter, AUTH_RATE_LIMIT, WRITE_RATE_LIMIT
 from fastapi_mail import FastMail, MessageSchema, MessageType
 
 logger = logging.getLogger(__name__)
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.htecpan.com")
 
 router = APIRouter()
 
@@ -253,7 +256,7 @@ async def register_user(user: UserCreate, db: SQLAlchemySession = Depends(get_db
             body=f"""
             <h2>¡Hola {new_user.nombre}!</h2>
             <p>Tu cuenta ha sido creada exitosamente en el sistema de docencia.</p>
-            <p>Ingresa a: <a href="https://www.hosptecpan.space/cartelera/eventos">Cartelera de eventos</a></p>
+            <p>Ingresa a: <a href="{FRONTEND_URL}/cartelera/eventos">Cartelera de eventos</a></p>
             <p><b>Usuario:</b> {new_user.username}</p>
             <p><b>Correo:</b> {new_user.email}</p>
             <p><b>Contraseña:</b> {contrasena_plana}</p>
@@ -316,7 +319,7 @@ async def recuperar_contrasena(
             purpose="password_reset"
         )
 
-        reset_link = f"https://www.hosptecpan.space/cartelera/restablecer?token={reset_token}"
+        reset_link = f"{FRONTEND_URL}/cartelera/restablecer?token={reset_token}"
 
         fm = FastMail(conf)
         message = MessageSchema(
