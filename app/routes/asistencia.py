@@ -54,7 +54,7 @@ async def listar_asistencias(
     db: SQLAlchemySession = Depends(get_db),
     orden: Optional[str] = Query("asc", description="Orden ascendente o descendente por fecha"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(100, ge=1, le=1000),
     current_user: UserModel = Depends(get_current_user),
 ):
     """

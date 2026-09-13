@@ -43,7 +43,10 @@ class Asistencia(Base):
 
     pertenencia = relationship("PertenenciaCulturalModel", back_populates="asistencias")
     sexo = relationship("SexoModel", back_populates="asistencias")
-    capacitacion = relationship("ActividadesModel", back_populates="asistencias")
+    capacitacion = relationship(
+        lambda: __import__("app.models.actividades", fromlist=["ActividadesModel"]).ActividadesModel,
+        back_populates="asistencias",
+    )
 
     @validates("nombre_completo")
     def convert_nombre(self, key, value):

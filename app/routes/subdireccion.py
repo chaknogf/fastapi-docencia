@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session as SQLAlchemySession
 
 from app.apicore import CRUDBase, get_db
-from app.database.security import get_current_user
+from app.database.security import get_current_admin_user
 from app.models.actividades import Subdireccion_Perteneciente_Model
 from app.schemas.actividad import (
     SubdireccionPertenecienteCreate,
@@ -61,7 +61,7 @@ async def obtener_subdireccion(
 @router.post("/", response_model=SubdireccionPertenecienteOut, status_code=201)
 async def crear_subdireccion(
     data: SubdireccionPertenecienteCreate,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db),
 ):
     try:
@@ -74,7 +74,7 @@ async def crear_subdireccion(
 async def actualizar_subdireccion(
     subdireccion_id: int,
     data: SubdireccionPertenecienteUpdate,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db),
 ):
     try:
@@ -86,7 +86,7 @@ async def actualizar_subdireccion(
 @router.delete("/{subdireccion_id}")
 async def eliminar_subdireccion(
     subdireccion_id: int,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_admin_user),
     db: SQLAlchemySession = Depends(get_db),
 ):
     try:

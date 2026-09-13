@@ -5,6 +5,7 @@ FastAPI Docencia - Punto de entrada principal
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -19,6 +20,7 @@ from app.routes.funciones import router as funciones
 from app.routes.asistencia import router as asistencia
 from app.routes.reporte import router as reporte
 from app.routes.auth import router as auth
+from app.auth.login import router as auth_login
 from app.database.db import engine, SessionLocal
 from app.database.config import ENVIRONMENT
 from app.core.rate_limiting import setup_rate_limiting, limiter
@@ -48,6 +50,12 @@ async def lifespan(app: FastAPI):
         id="envio_mensual_actividades",
         replace_existing=True,
     )
+    scheduler.add_job(
+        enviar_correos_semanales_worker,
+        CronTrigger(day_of_week="mon", hour=7, minute=0),
+        id="envio_semanal_actividades",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info("Scheduler de tareas iniciado")
 
@@ -74,6 +82,22 @@ def enviar_correos_mensuales_worker():
         db.close()
 
 
+def enviar_correos_semanales_worker():
+    """Worker para envío de correos semanales (lunes 07:00)."""
+    worker_logger = get_logger("worker.weekly_emails")
+    from app.routes.funciones import enviar_correos_semanales
+
+    db = SessionLocal()
+    try:
+        worker_logger.info("Iniciando envío de correos semanales...")
+        enviados = enviar_correos_semanales(db)
+        worker_logger.info(f"Correos semanales enviados: {enviados}")
+    except Exception as e:
+        worker_logger.error(f"Error en envío automático semanal: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 # ===========================================
 # APLICACIÓN FASTAPI
 # ===========================================
@@ -82,7 +106,6 @@ app = FastAPI(
     title="FASTAPI DOCENCIA",
     version="3.0.0",
     description="API de gestión de docencia y capacitaciones",
-    root_path="/fad",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -117,7 +140,7 @@ def health():
     """Health check de la aplicación."""
     try:
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return {
             "status": "ok",
             "database": "connected",
@@ -142,6 +165,7 @@ async def redirect_to_docs():
 # ===========================================
 
 app.include_router(auth, prefix="/fad", tags=["auth"])
+app.include_router(auth_login, prefix="/fad", tags=["auth-login"])
 app.include_router(user, prefix="/fad", tags=["users"])
 app.include_router(actividad, prefix="/fad", tags=["actividades"])
 app.include_router(servicios, prefix="/fad", tags=["servicios"])

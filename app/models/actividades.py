@@ -114,7 +114,10 @@ class Servicio_Encargado_Model(Base):
 
     subdireccion = relationship("Subdireccion_Perteneciente_Model", back_populates="servicios")
     actividades = relationship("ActividadesModel", back_populates="servicio")
-    usuarios = relationship("UserModel", back_populates="servicio")
+    usuarios = relationship(
+        lambda: __import__("app.models.user", fromlist=["UserModel"]).UserModel,
+        back_populates="servicio",
+    )
     
 # =========================================================
 #Modelo de lugar de realizacion
@@ -173,6 +176,10 @@ class ActividadesModel(Base):
     modalidad = relationship("Modalidad", back_populates="actividades")
     estado = relationship("Estado", back_populates="actividades")
     mes_obj = relationship("Mes", back_populates="actividades")  # <--- CORRECCIÓN
+    asistencias = relationship(
+        lambda: __import__("app.models.asistencia", fromlist=["Asistencia"]).Asistencia,
+        back_populates="capacitacion",
+    )
 
 # =========================================================
 # Vista de actividades completa
