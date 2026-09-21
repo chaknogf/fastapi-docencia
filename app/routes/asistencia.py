@@ -31,7 +31,7 @@ router = APIRouter(prefix="/asistencia", tags=["Asistencia"])
 async def registrar_asistencia(
     request: Request,
     data: AsistenciaCreate,
-    current_user: UserModel = Depends(get_current_user),
+    # current_user: UserModel = Depends(get_current_user),
     db: SQLAlchemySession = Depends(get_db)
 ):
     """
